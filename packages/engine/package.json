@@ -1,0 +1,9 @@
+{
+  "name": "@monopoli/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Mesin aturan Monopoli — deterministik (seeded RNG), tanpa UI. Dipakai web (lokal) & server (online)."
+}

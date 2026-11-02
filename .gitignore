@@ -1,0 +1,11 @@
+node_modules
+dist
+*.log
+packages/server/data
+# rahasia (Client ID Google, password SMTP, dll) — jangan di-commit
+.env
+.env.*
+!.env.example
+
+# hasil kerja asisten (gambar, salinan)
+Claude outputs/
