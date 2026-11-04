@@ -35,6 +35,7 @@ import { AccountDialog, AuthDialog, Avatar, DmDialog, FriendsPage, InviteDialog,
 import { t, tj, tr, useLang } from './i18n';
 import { armMusic, setMusicMood } from './music';
 import { Board2D } from './Board2D';
+import { publicUrl } from './platform';
 import { ThemeCards } from './ThemeCards';
 import { sampleTheme } from './themeSample';
 import { setTipsOn } from './tips';
@@ -947,7 +948,7 @@ function OnlineLobby({
       </div>
     );
 
-  const link = `${location.origin}${location.pathname}?room=${room.code}`;
+  const link = `${publicUrl()}/?room=${room.code}`;
   const roomTheme = room.customTheme ?? themes.find((t) => t.id === room.themeId);
   return (
     <div className="panel page">

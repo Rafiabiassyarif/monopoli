@@ -4377,3 +4377,71 @@ input[type='range'] {
   width: 70px !important;
   text-align: center;
 }
+
+/* halaman awal: pasang di HP (APK Android & iPhone) */
+.install {
+  padding: var(--s5);
+}
+.install h2 {
+  margin: 0 0 var(--s4);
+  font-size: var(--fs-lg);
+}
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--s3);
+}
+.install-card {
+  display: grid;
+  align-content: start;
+  gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+.install-card.mine {
+  border-color: rgba(251, 191, 36, 0.55);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.25), var(--shadow);
+}
+.install-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+}
+.install-head > div {
+  display: grid;
+  gap: 2px;
+}
+.install-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  color: #fff;
+}
+.install-icon.android {
+  background: linear-gradient(135deg, #34d399, #059669);
+}
+.install-icon.ios {
+  background: linear-gradient(135deg, #94a3b8, #475569);
+}
+.install-steps {
+  margin: 0;
+  padding-left: 1.2em;
+  display: grid;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+.inline-ic {
+  vertical-align: -2px;
+}
+a.btn {
+  text-decoration: none;
+  color: inherit;
+}
+a.btn.primary {
+  color: var(--brand-ink);
+}

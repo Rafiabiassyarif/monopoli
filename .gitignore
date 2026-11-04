@@ -9,3 +9,9 @@ packages/server/data
 
 # hasil kerja asisten (gambar, salinan)
 Claude outputs/
+
+# aplikasi HP: hasil build & kunci tanda tangan APK (RAHASIA — jangan di-commit)
+android-signing/
+*.keystore
+*.jks
+*.apk

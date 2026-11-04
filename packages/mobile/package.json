@@ -1,0 +1,22 @@
+{
+  "name": "monopoli-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplikasi Android/iPhone (Capacitor) untuk Monopoli 3D. Bukan workspace npm utama: dipasang terpisah saat build aplikasi.",
+  "scripts": {
+    "web": "cd ../.. && npm run build -w @monopoli/web -- --outDir ../mobile/www --emptyOutDir",
+    "android:add": "cap add android",
+    "assets": "capacitor-assets generate --android --ios --iconBackgroundColor \"#0b0d14\" --iconBackgroundColorDark \"#0b0d14\" --splashBackgroundColor \"#0b0d14\" --splashBackgroundColorDark \"#0b0d14\"",
+    "sync": "cap sync",
+    "apk": "cd android && ./gradlew assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "4.0.0",
+    "@capacitor/cli": "8.6.0"
+  }
+}

@@ -692,6 +692,7 @@ const MIME: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.apk': 'application/vnd.android.package-archive',
   '.webp': 'image/webp',
   '.jpg': 'image/jpeg',
   '.json': 'application/json',
@@ -706,8 +707,22 @@ const gzCache = new Map<string, Buffer>();
 
 const ipOf = (req: IncomingMessage) => (process.env.TRUST_PROXY ? String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() : '') || req.socket.remoteAddress || '?';
 
+// Aplikasi Android/iPhone (Capacitor) memuat game dari dalam aplikasi (origin https://localhost /
+// capacitor://localhost) lalu memanggil API server ini → izinkan origin itu (CORS). Tambahan: CORS_ORIGINS=a,b
+// Aman: login memakai token Bearer, bukan cookie, jadi origin lain tidak bisa memakai sesi orang.
+const CORS_ORIGINS = new Set(['https://localhost', 'capacitor://localhost', 'http://localhost', ...String(process.env.CORS_ORIGINS ?? '').split(',').map((x) => x.trim().replace(/\/$/, '')).filter(Boolean)]);
+
 const http = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://x');
+  const origin = String(req.headers.origin ?? '');
+  if (origin && CORS_ORIGINS.has(origin) && url.pathname.startsWith('/api/')) {
+    res.setHeader('access-control-allow-origin', origin);
+    res.setHeader('vary', 'origin');
+    res.setHeader('access-control-allow-headers', 'content-type, authorization');
+    res.setHeader('access-control-allow-methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
+    res.setHeader('access-control-max-age', '86400');
+    if (req.method === 'OPTIONS') return res.writeHead(204).end();
+  }
   if (await handleApi(req, res, ipOf(req))) return;
   const av = readAvatar(url.pathname);
   if (av) {

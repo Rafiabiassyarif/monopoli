@@ -16,6 +16,6 @@ addEventListener('error', (e) => reportClientError(String(e.message ?? e), e.err
 addEventListener('unhandledrejection', (e) => reportClientError(String(e.reason?.message ?? e.reason), e.reason?.stack));
 
 // PWA: cache aset supaya main lokal tetap jalan offline (hanya di build produksi)
-if (import.meta.env.PROD && import.meta.env.VITE_OFFLINE !== '1' && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && import.meta.env.VITE_OFFLINE !== '1' && import.meta.env.VITE_APP !== '1' && 'serviceWorker' in navigator) {
   addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }

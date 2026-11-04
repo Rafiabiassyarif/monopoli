@@ -1,7 +1,7 @@
 // Halaman & dialog akun: landing page, masuk/daftar (password + Google), lupa password, akun & keamanan,
 // chip pengguna, teman, chat pribadi, profil (level & pencapaian), blokir/laporan, peringkat, laporan admin.
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Ban,
@@ -10,6 +10,7 @@ import {
   Camera,
   Check,
   Coins,
+  Download,
   Crown,
   Eye,
   Flag as FlagIcon,
@@ -22,11 +23,14 @@ import {
   Medal,
   MessageCircle,
   Palette,
+  Plus,
   ScrollText,
+  Share,
   Search,
   Send,
   ShieldAlert,
   ShieldCheck,
+  Smartphone,
   Trash,
   Upload,
   Trophy,
@@ -53,6 +57,7 @@ import {
 import { OFFLINE, adminBan, adminUnban, closeReport, fetchLeaderboard, fetchProfile, fetchReports, loadGoogle, searchUsers, sendReport, type Auth, type Invite, type LeaderRow, type Social } from './auth';
 import { dateLocale, getLang, setLang, t, tj, tr, useLang, type Lang } from './i18n';
 import { COLORS, Field, Flag, Modal, Seg, TOKEN_ICONS, TokenBadge, askConfirm } from './ui';
+import { ANDROID_APK_URL, IS_APP, serverUrl } from './platform';
 
 const errMsg = (e: unknown) => tr(e instanceof Error ? e.message : String(e));
 
@@ -69,7 +74,7 @@ export function Avatar({ user, size = 32 }: { user: Pick<UserPublic, 'avatar' | 
       </span>
     );
   if (user.avatar && !broken)
-    return <img className="avatar" src={user.avatar} width={size} height={size} alt="" referrerPolicy="no-referrer" onError={() => setBroken(true)} />;
+    return <img className="avatar" src={serverUrl(user.avatar)} width={size} height={size} alt="" referrerPolicy="no-referrer" onError={() => setBroken(true)} />;
   return <TokenBadge token={user.token} color={user.color} size={size} />;
 }
 
@@ -208,6 +213,8 @@ export function Landing({ theme, auth, invitedCode, onLogin, onGuest }: { theme:
         </div>
       </section>
 
+      {!IS_APP && <InstallApp />}
+
       <footer className="landing-foot muted small">
         <span>
           <Flag theme={theme} size={12} /> {t('Edisi {name}', { name: t(theme.name) })} · {t('Monopoli adalah merek dagang Hasbro; proyek ini tiruan penggemar untuk bermain bersama.')}
@@ -237,6 +244,86 @@ function GoogleG({ size = 20 }: { size?: number }) {
  * Tombol Google bergaya Monopoli. Tampilan kita sendiri; di atasnya ada tombol resmi Google
  * (iframe, nyaris transparan) yang menerima klik — jadi alur login tetap 100% milik Google.
  */
+/** Event "pasang aplikasi" dari Chrome Android/desktop (PWA). Ditangkap sekali di awal supaya tidak terlewat. */
+type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+let installEvt: InstallPrompt | null = null;
+const installSubs = new Set<() => void>();
+if (typeof window !== 'undefined')
+  addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installEvt = e as InstallPrompt;
+    installSubs.forEach((f) => f());
+  });
+
+/** Bagian "Pasang di HP" di halaman awal: APK Android siap pasang + cara pasang di iPhone. */
+function InstallApp() {
+  useLang();
+  const [, force] = useState(0);
+  useEffect(() => {
+    const f = () => force((n) => n + 1);
+    installSubs.add(f);
+    return () => void installSubs.delete(f);
+  }, []);
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  const android_ = (
+    <div className={`install-card panel ${android ? 'mine' : ''}`}>
+      <div className="install-head">
+        <span className="install-icon android" aria-hidden>
+          <Smartphone size={22} />
+        </span>
+        <div>
+          <b>Android</b>
+          <span className="muted small">{t('Aplikasi .apk — tinggal unduh & pasang')}</span>
+        </div>
+      </div>
+      <a className="btn primary block" href={ANDROID_APK_URL} download>
+        <Download size={16} /> {t('Unduh APK Android')}
+      </a>
+      <ol className="install-steps">
+        <li>{t('Tekan "Unduh APK Android" di HP Android-mu.')}</li>
+        <li>{t('Buka file monopoli.apk dari notifikasi atau folder Download.')}</li>
+        <li>{t('Kalau diminta, izinkan "Pasang aplikasi tak dikenal" untuk browser/File Manager, lalu tekan Pasang.')}</li>
+        <li>{t('Buka Monopoli dari layar utama. Main lokal bisa tanpa internet.')}</li>
+      </ol>
+      {installEvt && (
+        <button className="btn block" onClick={() => void installEvt?.prompt().finally(() => ((installEvt = null), force((n) => n + 1)))}>
+          <Plus size={16} /> {t('Atau pasang versi web (tanpa APK)')}
+        </button>
+      )}
+    </div>
+  );
+  const ios_ = (
+    <div className={`install-card panel ${ios ? 'mine' : ''}`}>
+      <div className="install-head">
+        <span className="install-icon ios" aria-hidden>
+          <Smartphone size={22} />
+        </span>
+        <div>
+          <b>iPhone & iPad</b>
+          <span className="muted small">{t('Pasang lewat Safari — tampil layar penuh seperti aplikasi')}</span>
+        </div>
+      </div>
+      <ol className="install-steps">
+        <li>{t('Buka halaman game ini di Safari (bukan Chrome/Instagram).')}</li>
+        <li>
+          {tj('Tekan tombol {share} Bagikan di bawah layar.', { share: <Share size={14} className="inline-ic" aria-hidden /> })}
+        </li>
+        <li>{t('Gulir lalu pilih "Tambah ke Layar Utama", lalu tekan Tambah.')}</li>
+        <li>{t('Buka Monopoli dari layar utama.')}</li>
+      </ol>
+      <p className="muted small">{t('Apple tidak mengizinkan file aplikasi dipasang langsung di luar App Store, jadi iPhone memakai cara ini.')}</p>
+    </div>
+  );
+  return (
+    <section className="install panel" id="pasang">
+      <h2>{t('Pasang di HP')}</h2>
+      <div className="install-grid">{ios ? [ios_, android_].map((x, k) => <Fragment key={k}>{x}</Fragment>) : [android_, ios_].map((x, k) => <Fragment key={k}>{x}</Fragment>)}</div>
+    </section>
+  );
+}
+
 export function GoogleButton({ clientId, onCredential, onDone, text = 'continue_with' }: { clientId: string; onCredential: (credential: string) => Promise<unknown>; onDone?: () => void; text?: 'continue_with' | 'signin_with' }) {
   const box = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);

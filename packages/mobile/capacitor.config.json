@@ -1,0 +1,15 @@
+{
+  "appId": "com.monopoli3d.app",
+  "appName": "Monopoli",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0b0d14"
+  },
+  "ios": {
+    "backgroundColor": "#0b0d14",
+    "contentInset": "never"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

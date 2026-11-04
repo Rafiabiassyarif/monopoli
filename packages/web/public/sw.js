@@ -2,8 +2,8 @@
 // - /assets/* (nama ber-hash) → cache dulu, selamanya
 // - halaman → jaringan dulu, cadangan dari cache saat offline
 // - /ws & /health tidak pernah disentuh
-const CACHE = 'monopoli-v2';
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'monopoli-v3';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

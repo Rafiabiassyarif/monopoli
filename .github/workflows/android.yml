@@ -1,0 +1,119 @@
+# Membuat APK Android (Capacitor) otomatis setiap ada push ke main, lalu menerbitkannya di
+# halaman Releases. Tombol "Unduh APK Android" di halaman awal game mengarah ke:
+#   https://github.com/<pemilik>/<repo>/releases/latest/download/monopoli.apk
+#
+# Pengaturan (GitHub → Settings → Secrets and variables → Actions):
+#   Variables  SERVER_URL          alamat server game online, mis. https://monopoli.contoh.com
+#                                  (kosong = APK hanya main lokal/offline)
+#   Secrets    ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#                                  kunci tanda tangan tetap → pemain bisa update tanpa uninstall.
+#                                  Tanpa secrets: APK debug (update harus uninstall dulu).
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Pasang paket
+        run: |
+          npm ci
+          npm install --no-audit --no-fund --prefix packages/mobile
+
+      - name: Build game untuk aplikasi
+        env:
+          VITE_APP: '1'
+          VITE_SERVER_URL: ${{ vars.SERVER_URL }}
+        run: npm run web --prefix packages/mobile
+
+      - name: Siapkan proyek Android
+        working-directory: packages/mobile
+        run: |
+          npx cap add android
+          npm run assets
+          npx cap sync android
+          sed -i "s/versionCode 1$/versionCode ${{ github.run_number }}/; s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+
+      - name: Kunci tanda tangan (kalau ada secrets)
+        id: sign
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        working-directory: packages/mobile/android
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > app/release.keystore
+            cat >> app/build.gradle <<'GRADLE'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file('release.keystore')
+                      storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                      keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                      keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+                  }
+              }
+              buildTypes { release { signingConfig signingConfigs.release } }
+          }
+          GRADLE
+            echo "task=assembleRelease" >> "$GITHUB_OUTPUT"
+            echo "out=app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Secrets kunci belum diisi — membuat APK debug (pemain harus uninstall dulu sebelum update)."
+            echo "task=assembleDebug" >> "$GITHUB_OUTPUT"
+            echo "out=app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build APK
+        working-directory: packages/mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew ${{ steps.sign.outputs.task }} --no-daemon
+          cp ${{ steps.sign.outputs.out }} "$GITHUB_WORKSPACE/monopoli.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monopoli-apk
+          path: monopoli.apk
+
+      - name: Terbitkan di Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v1.0.${{ github.run_number }}
+          name: Monopoli Android 1.0.${{ github.run_number }}
+          body: |
+            APK Android Monopoli 3D. Unduh **monopoli.apk** di bawah lalu buka di HP Android.
+            Server online: ${{ vars.SERVER_URL || 'belum diatur (main lokal saja)' }}
+          files: monopoli.apk
+          make_latest: true

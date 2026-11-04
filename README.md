@@ -110,6 +110,30 @@ Id animasi `anim`: horse, bird, deer, volcano, dancer, ship, fish, oilpump, equa
 
 Main online: kartu & efek tema milik host dipakai semua pemain di room itu.
 
+## Aplikasi Android & iPhone
+
+**Android (APK siap pasang)** — dibuat otomatis oleh GitHub Actions (`.github/workflows/android.yml`) setiap push ke `main`, lalu terbit di **Releases** sebagai `monopoli.apk`. Tombol **Unduh APK Android** di halaman awal mengarah ke `https://github.com/Rafiabiassyarif/monopoli/releases/latest/download/monopoli.apk` (ganti lewat `VITE_ANDROID_APK_URL` saat build web).
+
+Pengaturan sekali di GitHub → repo → **Settings → Secrets and variables → Actions**:
+
+1. **Variables** → `SERVER_URL` = alamat server game setelah di-hosting (mis. `https://monopoli.contoh.com`). Kosong = APK hanya main lokal/offline (lawan bot & teman satu HP).
+2. **Secrets** → `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` — isinya ada di `android-signing/RAHASIA-github-secrets.txt` (folder ini tidak ikut di-commit). Dengan kunci tetap, pemain bisa update aplikasi tanpa uninstall. Tanpa secrets, Actions membuat APK debug.
+3. Jalankan ulang: tab **Actions → Android APK → Run workflow** (atau push apa saja ke `main`).
+
+Di aplikasi: login pakai email + kode (login Google diblokir Google di dalam aplikasi WebView). Server mengizinkan panggilan dari aplikasi (CORS `https://localhost`, `capacitor://localhost`; tambah origin lain lewat `CORS_ORIGINS`).
+
+Build APK di komputer sendiri (butuh Android Studio + JDK 21):
+
+```bash
+cd packages/mobile
+npm install
+VITE_APP=1 VITE_SERVER_URL=https://monopoli.contoh.com npm run web
+npx cap add android && npm run assets && npx cap sync android
+npx cap open android        # Build → Build APK(s)
+```
+
+**iPhone/iPad** — Apple tidak mengizinkan file aplikasi dipasang di luar App Store, jadi pemain memasang versi web: buka game di **Safari → Bagikan → Tambah ke Layar Utama** (layar penuh, ikon sendiri, main lokal tetap jalan offline). Aplikasi iOS asli butuh Mac + Xcode + akun Apple Developer ($99/tahun): `npx cap add ios && npx cap open ios` dari `packages/mobile`, lalu Archive & unggah ke App Store Connect.
+
 ## Test
 
     npm test          # aturan resmi + game bot penuh + server (akun, email, teman, chat, admin, penonton, main cepat)

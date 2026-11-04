@@ -3,9 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AccountPrivate, AuthResult, ClientMsg, DirectMessage, FriendsData, Profile, Report, ServerMsg, UserPublic } from '@monopoli/engine';
 import { del, getJSON, getRaw, setJSON, setRaw } from './storage';
+import { IS_APP, SERVER, serverUrl } from './platform';
 
-/** Build tanpa server (mis. halaman demo statis): akun & online disembunyikan, main lokal tetap penuh. */
-export const OFFLINE = import.meta.env.VITE_OFFLINE === '1';
+/**
+ * Build tanpa server (mis. halaman demo statis, atau aplikasi HP tanpa VITE_SERVER_URL):
+ * akun & online disembunyikan, main lokal tetap penuh.
+ */
+export const OFFLINE = import.meta.env.VITE_OFFLINE === '1' || (IS_APP && !SERVER);
 
 const TOKEN_KEY = 'monopoli.session';
 const GUEST_KEY = 'monopoli.guest';
@@ -23,7 +27,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
   const token = getToken();
   let r: Response;
   try {
-    r = await fetch(`/api${path}`, {
+    r = await fetch(serverUrl(`/api${path}`), {
       method: opts.method ?? (opts.body !== undefined ? 'POST' : 'GET'),
       headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
@@ -39,6 +43,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
 export const wsUrl = () => {
   const env = import.meta.env.VITE_WS_URL as string | undefined;
   if (env) return env;
+  if (SERVER) return `${SERVER.replace(/^http/, 'ws')}/ws`;
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
 };
 
@@ -70,7 +75,8 @@ export function useAuth() {
 
   useEffect(() => {
     if (OFFLINE) return;
-    api<{ googleClientId: string | null }>('/config').then(setConfig, () => {});
+    // Login Google diblokir Google di dalam WebView aplikasi HP → di aplikasi cukup login email (kode OTP)
+    api<{ googleClientId: string | null }>('/config').then((c) => setConfig(IS_APP ? { ...c, googleClientId: null } : c), () => {});
     void reloadMe();
   }, [reloadMe]);
 
@@ -270,7 +276,7 @@ export const fetchLeaderboard = (by: 'xp' | 'wins' | 'rate') => api<{ by: string
 let reported = 0;
 export function reportClientError(message: string, stack?: string) {
   if (OFFLINE || reported++ > 5) return;
-  void fetch('/api/client-error', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message, stack, url: location.pathname }) }).catch(() => {});
+  void fetch(serverUrl('/api/client-error'), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message, stack, url: location.pathname }) }).catch(() => {});
 }
 export const searchUsers = (q: string) => api<{ users: (UserPublic & { friendship: Profile['friendship'] })[] }>(`/users?q=${encodeURIComponent(q)}`).then((r) => r.users);
 
