@@ -389,12 +389,12 @@ function Highlight({ tile }: { tile: number | null }) {
 }
 
 // ---------- scene utama ----------
-function SceneFx({ state, theme, stepMs }: { state: GameState; theme: Theme; stepMs: number }) {
+function SceneFx({ state, theme, stepMs, me }: { state: GameState; theme: Theme; stepMs: number; me: string | null }) {
   const { cards, flights, landings, anims, doneCard, doneFlight } = useEventFx(state, stepMs, theme);
   return (
     <>
       {cards.slice(0, 1).map((c) => (
-        <DrawnCard key={c.key} draw={c} theme={theme} state={state} onDone={() => doneCard(c.key)} />
+        <DrawnCard key={c.key} draw={c} theme={theme} state={state} me={me} onDone={() => doneCard(c.key)} />
       ))}
       <MoneyFlights flights={flights} symbol={theme.currency.symbol} onDone={doneFlight} />
       {anims.map((a) => (
@@ -469,6 +469,8 @@ export interface SceneProps {
   idle?: boolean;
   /** dipanggil sekali kalau 3D terus-menerus di bawah ±20 fps saat bermain */
   onLowFps?: () => void;
+  /** pemain di layar ini (online) — isi kartu orang lain disembunyikan */
+  me?: string | null;
 }
 
 /** Ukur fps saat bermain; dua jendela 5 detik berturut-turut di bawah 20 fps → laporkan sekali. */
@@ -501,7 +503,7 @@ function FpsWatch({ active, onLow }: { active: boolean; onLow?: () => void }) {
   return null;
 }
 
-export function GameScene({ state, theme, selected, hovered, onTile, onHover, rollKey, stepMs, camMode, bottomInset = 0, idle = false, onLowFps }: SceneProps) {
+export function GameScene({ state, theme, selected, hovered, onTile, onHover, rollKey, stepMs, camMode, bottomInset = 0, idle = false, onLowFps, me = null }: SceneProps) {
   const [low] = useState(() => /Mobi|Android/i.test(navigator.userAgent) || (navigator.hardwareConcurrency ?? 8) <= 4);
   // di balik menu: resolusi rendah supaya hemat baterai/GPU; gerak dikurangi → render hanya saat perlu
   const [still] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -551,7 +553,7 @@ export function GameScene({ state, theme, selected, hovered, onTile, onHover, ro
             return <Token key={p.id} p={p} idx={same.indexOf(p)} total={same.length} active={cur?.id === p.id} stepMs={stepMs} />;
           })}
           <DicePair dice={state.dice} rollKey={rollKey} from={cur ? tilePos(cur.pos, -1.2) : [0, 4]} />
-          <SceneFx state={state} theme={theme} stepMs={stepMs} />
+          <SceneFx state={state} theme={theme} stepMs={stepMs} me={me} />
         </>
       )}
       <CardDecks theme={theme} />

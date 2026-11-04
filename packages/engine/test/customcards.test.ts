@@ -45,3 +45,24 @@ describe('kartu kustom', () => {
     expect(again.cardDefs?.chance?.[0].effect.kind).toBe('jailFree');
   });
 });
+
+describe('kartu rahasia', () => {
+  it('isi kartu hanya dikirim ke pengambilnya; lokal: kartu bot tertutup', async () => {
+    const { stateFor, cardVisible } = await import('../src');
+    let s = createGame(P(3), 1);
+    s = { ...s, events: [...s.events, { seq: 99, type: 'card', player: 'p1', deck: 'chance', card: 'c6' }], lastCard: { deck: 'chance', id: 'c6' } };
+    const own = stateFor(s, 'p1').events.find((e) => e.type === 'card');
+    const other = stateFor(s, 'p0').events.find((e) => e.type === 'card');
+    const watcher = stateFor(s, null).events.find((e) => e.type === 'card');
+    expect(own).toMatchObject({ card: 'c6' });
+    expect(other).toMatchObject({ card: '', player: 'p1', deck: 'chance' });
+    expect(watcher).toMatchObject({ card: '' });
+    expect(stateFor(s, 'p0').lastCard).toBeNull();
+    expect(stateFor(s, 'p0').rng).toBe(0);
+    // lokal (me = null): manusia terlihat, bot tertutup
+    s.players[2].bot = true;
+    expect(cardVisible(s, { player: 'p1', card: 'c6' }, null)).toBe(true);
+    expect(cardVisible(s, { player: 'p2', card: 'c6' }, null)).toBe(false);
+    expect(cardVisible(s, { player: 'p1', card: 'c6' }, 'p0')).toBe(false);
+  });
+});

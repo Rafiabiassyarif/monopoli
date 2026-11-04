@@ -22,6 +22,7 @@ import {
   createGame,
   migrateState,
   publicState,
+  stateFor,
   safeAction,
   validateTheme,
   RuleError,
@@ -165,9 +166,16 @@ function unwatch(ctx: Ctx, ws: WebSocket) {
 /** seed RNG & urutan dek tidak pernah dikirim ke klien (anti-curang) */
 const sendState = (r: Room, ws?: WebSocket | null) => {
   if (!r.state) return;
-  const m: ServerMsg = { t: 'state', state: publicState(r.state) };
-  if (ws !== undefined) send(ws, m);
-  else broadcast(r, m);
+  // tiap penerima dapat salinannya sendiri: isi kartu hanya untuk pemain yang mengambilnya
+  const forWs = (w: WebSocket | null | undefined) => {
+    const seat = r.seats.find((x) => x.ws === w);
+    send(w ?? null, { t: 'state', state: stateFor(r.state!, seat?.id ?? null) });
+  };
+  if (ws !== undefined) forWs(ws);
+  else {
+    r.seats.forEach((x) => x.ws && forWs(x.ws));
+    r.watchers?.forEach((w) => forWs(w));
+  }
   if (r.state.phase === 'gameover' && !r.recorded) recordGame(r);
   markDirty();
 };

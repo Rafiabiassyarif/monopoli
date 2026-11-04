@@ -1,0 +1,90 @@
+{
+  "id": "galaksi-antariksa",
+  "name": "Galaksi Antariksa",
+  "flag": "🚀",
+  "description": "Jelajahi tata surya, koloni Mars, hingga stasiun luar angkasa terjauh.",
+  "currency": {
+    "symbol": "⚡",
+    "multiplier": 1000,
+    "locale": "id-ID",
+    "compact": true,
+    "symbolAfter": true
+  },
+  "corners": {
+    "go": "LANDASAN PELUNCURAN",
+    "jail": "Karantina Orbit",
+    "parking": "Pengisian Energi Surya",
+    "gotojail": "Tersedot Lubang Hitam!"
+  },
+  "deckNames": {
+    "chance": "Transmisi Misterius",
+    "community": "Dana Federasi Galaksi"
+  },
+  "properties": [
+    "Kawah Bulan",
+    "Lembah Debu",
+    "Kubah Mars",
+    "Ngarai Merah",
+    "Gunung Olympus",
+    "Cincin Asteroid",
+    "Tambang Ceres",
+    "Pangkalan Vesta",
+    "Awan Jupiter",
+    "Satelit Europa",
+    "Stasiun Ganymede",
+    "Cincin Saturnus",
+    "Laut Metana Titan",
+    "Observatorium Rhea",
+    "Gletser Uranus",
+    "Badai Biru Neptunus",
+    "Kutub Triton",
+    "Satelit Pluto",
+    "Sabuk Kuiper",
+    "Awan Oort",
+    "Gerbang Antarbintang",
+    "Pusat Galaksi"
+  ],
+  "stations": [
+    "Pelabuhan Orbit Alpha",
+    "Stasiun Gateway Beta",
+    "Depo Kargo Gamma",
+    "Pusat Transit Omega"
+  ],
+  "utilities": [
+    "Reaktor Fusi Nuklir",
+    "Penyuling Air Kosmik"
+  ],
+  "taxes": [
+    "Pajak Gravitasi",
+    "Bea Cukai Lintas Dimensi"
+  ],
+  "groupColors": [
+    "#78350f",
+    "#38bdf8",
+    "#ec4899",
+    "#f97316",
+    "#ef4444",
+    "#eab308",
+    "#10b981",
+    "#6366f1"
+  ],
+  "tokens": [
+    "Pesawat Ulang Alik",
+    "Satelit Radar",
+    "Rover Penjelajah",
+    "Kapsul Astronot",
+    "Alien Imut",
+    "Kristal Kosmik"
+  ],
+  "visual": {
+    "sky": ["#0f172a", "#020617"],
+    "table": "#0b0f19",
+    "board": "#1e293b",
+    "boardCenter": "#38bdf8",
+    "accent": "#00f0ff",
+    "buildings": "modern",
+    "landmark": "skyscraper",
+    "fog": "#0f172a",
+    "lightColor": "#c7d2fe"
+  }
+}

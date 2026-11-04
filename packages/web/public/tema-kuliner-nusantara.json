@@ -1,0 +1,89 @@
+{
+  "id": "kuliner-nusantara",
+  "name": "Kuliner Nusantara",
+  "flag": "🍲",
+  "description": "Jelajah cita rasa Nusantara dari warung kaki lima legendaris hingga hidangan istimewa.",
+  "currency": {
+    "symbol": "Rp",
+    "multiplier": 1000000,
+    "locale": "id-ID",
+    "compact": true
+  },
+  "corners": {
+    "go": "DAPUR UTAMA (START)",
+    "jail": "Ruang Cuci Piring",
+    "parking": "Warung Kopi & Rehat",
+    "gotojail": "Kena Razia Bon!"
+  },
+  "deckNames": {
+    "chance": "Resep Rahasia",
+    "community": "Arisan Kuliner"
+  },
+  "properties": [
+    "Kerak Telor Betawi",
+    "Gado-Gado Jakarta",
+    "Tahu Sumedang",
+    "Batagor Bandung",
+    "Cireng Salju",
+    "Soto Kudus",
+    "Lumpia Semarang",
+    "Gudeg Malioboro",
+    "Sate Madura",
+    "Rawon Surabaya",
+    "Bebek Sinjay",
+    "Ayam Betutu",
+    "Sate Lilit Ubud",
+    "Plecing Lombok",
+    "Coto Makassar",
+    "Konro Bakar Karebosi",
+    "Pallubasa Serigala",
+    "Pempek Palembang",
+    "Mie Aceh Kepiting",
+    "Bika Ambon Medan",
+    "Sate Padang Pariaman",
+    "Rendang Payakumbuh"
+  ],
+  "stations": [
+    "Food Court Stasiun",
+    "Pujasera Pelabuhan",
+    "Lounge Kuliner Bandara",
+    "Rest Area Tol Rasa"
+  ],
+  "utilities": [
+    "Pabrik Kecap Legendaris",
+    "Pabrik Kerupuk Kaleng"
+  ],
+  "taxes": [
+    "Pajak Restoran 10%",
+    "Biaya Layanan & Tips"
+  ],
+  "groupColors": [
+    "#8d5a3b",
+    "#7fd3f7",
+    "#d94f9b",
+    "#f39c3d",
+    "#e53935",
+    "#f9d71c",
+    "#2eaa5c",
+    "#1e4fd8"
+  ],
+  "tokens": [
+    "Kuali Besi",
+    "Centong Nasi",
+    "Mangkok Ayam Jago",
+    "Tusuk Sate",
+    "Cobek Batu",
+    "Teko Tradisional"
+  ],
+  "visual": {
+    "sky": ["#ffedd5", "#7c2d12"],
+    "table": "#451a03",
+    "board": "#fef3c7",
+    "boardCenter": "#b45309",
+    "accent": "#d97706",
+    "buildings": "tropical",
+    "landmark": "monas",
+    "fog": "#78350f",
+    "lightColor": "#fef9c3"
+  }
+}

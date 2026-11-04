@@ -1,7 +1,7 @@
 // Nama petak & teks kartu yang sudah diterjemahkan ke bahasa antarmuka.
 // Engine menyimpan nama asli (Indonesia / nama tempat); untuk tampilan selalu pakai fungsi di sini,
 // supaya papan, kartu, log, dan dialog memakai kata yang sama (mis. "Kesempatan" ↔ "Chance").
-import { cardById, cardText as rawCardText, tileName as rawTileName, type GameState, type Options, type Theme } from '@monopoli/engine';
+import { cardById, cardVisible, cardText as rawCardText, tileName as rawTileName, type GameState, type Options, type Theme } from '@monopoli/engine';
 import { t, tName, tr } from './i18n';
 
 /** Nama petak untuk ditampilkan (diterjemahkan bila ada di kamus; nama kota tetap). */
@@ -26,4 +26,21 @@ export function cardLine(state: Pick<GameState, 'cardDefs' | 'options'>, theme: 
   if (!def) return '';
   const custom = !!state.cardDefs?.[deck];
   return cardText(custom ? { ...theme, cards: undefined } : theme, id, custom ? def.text : t(def.text), state.options);
+}
+
+/**
+ * Muka kartu untuk layar ini. Online: isi kartu hanya untuk pemain yang mengambilnya (server juga
+ * menyembunyikannya). Lokal: kartu bot tertutup. Yang lain melihat kartu tertutup + nama pengambilnya.
+ */
+export function cardFace(
+  state: Pick<GameState, 'cardDefs' | 'options' | 'players'>,
+  theme: Theme,
+  e: { deck: 'chance' | 'community'; card: string; player: string },
+  me: string | null,
+): { text: string; hidden: boolean } {
+  if (!cardVisible(state, e, me)) {
+    const name = state.players.find((p) => p.id === e.player)?.name ?? '?';
+    return { hidden: true, text: t('🔒 Kartu milik {name} — isinya rahasia, hanya dia yang bisa melihat.', { name }) };
+  }
+  return { hidden: false, text: cardLine(state, theme, e.deck, e.card) };
 }

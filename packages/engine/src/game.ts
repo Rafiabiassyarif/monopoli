@@ -1199,4 +1199,25 @@ export function publicState(s: GameState): GameState {
   return { ...s, rng: 0, decks: { chance: [], community: [] } };
 }
 
+/**
+ * State online untuk satu penerima: isi kartu Kesempatan/Dana Umum hanya terlihat oleh pemain yang
+ * mengambilnya. Pemain lain & penonton menerima event kartu tanpa id (card: '') — tahu ada yang
+ * mengambil kartu, tapi tidak tahu isinya (akibatnya, mis. uang berpindah, tetap terlihat).
+ */
+export function stateFor(s: GameState, viewer: string | null): GameState {
+  const p = publicState(s);
+  return {
+    ...p,
+    events: p.events.map((e) => (e.type === 'card' && e.player !== viewer ? { ...e, card: '' } : e)),
+    lastCard: null,
+  };
+}
+
+/** true kalau isi kartu ini boleh ditampilkan ke penonton layar ini. */
+export function cardVisible(s: Pick<GameState, 'players'>, e: { player: string; card: string }, me: string | null): boolean {
+  if (!e.card) return false; // disembunyikan server
+  if (me) return e.player === me; // online: hanya pengambil kartu
+  return !s.players.find((p) => p.id === e.player)?.bot; // lokal: kartu bot tertutup, kartu manusia terbuka
+}
+
 export { GROUP_COUNT };

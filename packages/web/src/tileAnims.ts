@@ -370,6 +370,7 @@ export const tileAnimAt = tileAnimFor;
 
 /** Semua id animasi (untuk galeri/uji). */
 export const ALL_ANIMS = Object.keys(BASE) as AnimId[];
+export const ANIM_LABELS = BASE;
 
 /** Putar ulang animasi petak dari mana saja (mis. tombol di kartu akta). Ditangkap scene 3D. */
 export const PLAY_ANIM_EVENT = 'monopoli:tile-anim';

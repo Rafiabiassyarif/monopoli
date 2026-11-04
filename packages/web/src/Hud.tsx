@@ -68,7 +68,7 @@ import {
   type GameState,
   type Theme,
 } from '@monopoli/engine';
-import { cardLine, tileName } from './names';
+import { cardFace, tileName } from './names';
 import { isMuted, setMuted, sfx } from './sfx';
 import { MusicLink } from './MusicLink';
 import { musicOn, musicVolume, setMusicOn, setMusicVolume } from './music';
@@ -223,7 +223,8 @@ export function Hud(props: Props) {
       case 'free':
         return { icon: '🔓', text: t('{name} bebas dari penjara', { name: name(e.player) }) };
       case 'card': {
-        return { icon: e.deck === 'chance' ? '❓' : '🎁', text: `${name(e.player)}: ${cardLine(state, theme, e.deck, e.card)}` };
+        const f = cardFace(state, theme, e, me ?? null);
+        return { icon: e.deck === 'chance' ? '❓' : '🎁', text: f.hidden ? t('{name} mengambil kartu {deck} (isi dirahasiakan)', { name: name(e.player), deck: tr(e.deck === 'chance' ? theme.deckNames.chance : theme.deckNames.community) }) : `${name(e.player)}: ${f.text}` };
       }
       case 'auction':
         return {
@@ -744,45 +745,74 @@ function AuctionBox({ state, theme, myTurn, act, name }: { state: GameState; the
   const [bid, setBid] = useState(a.bid + 10);
   useEffect(() => setBid(a.bid + 10), [a.bid, a.turn]);
   const money = (n: number) => formatMoney(theme, n);
+  const color = swatchColor(theme, a.tile);
+  const leader = a.bidder ? state.players.find((p) => p.id === a.bidder) : null;
   return (
-    <div className="dock-body">
-      <div className="auction-head">
-        <span className="swatch" style={{ background: swatchColor(theme, a.tile) }} />
-        <div>
-          <b>{building ? (a.kind === 'hotel' ? t('Lelang hotel terakhir di bank') : t('Lelang rumah terakhir di bank')) : tileName(theme, a.tile)}</b>
-          <div className="muted">
-            {building
-              ? t('Stok bank tidak cukup untuk semua peminat. Tawaran = harga tambahan di atas biaya bangun ({cost}). Diminta {name}.', { cost: money(BOARD[a.tile].houseCost!), name: name(state.tiles[a.tile].owner) })
-              : t('Harga normal {price}', { price: money(BOARD[a.tile].price!) })}
+    <div className="dock-body auction">
+      <div className="auction-top">
+        <div className="auction-lot" style={{ ['--c' as string]: color }}>
+          <span className="auction-band" />
+          <div className="auction-lot-text">
+            <span className="auction-kicker">
+              <Gavel size={13} /> {t('Dilelang')}
+            </span>
+            <b className="auction-name">{building ? (a.kind === 'hotel' ? t('Lelang hotel terakhir di bank') : t('Lelang rumah terakhir di bank')) : tileName(theme, a.tile)}</b>
+            <span className="auction-sub">
+              {building
+                ? t('Stok bank tidak cukup untuk semua peminat. Tawaran = harga tambahan di atas biaya bangun ({cost}). Diminta {name}.', { cost: money(BOARD[a.tile].houseCost!), name: name(state.tiles[a.tile].owner) })
+                : t('Harga normal {price}', { price: money(BOARD[a.tile].price!) })}
+            </span>
           </div>
         </div>
-        <div className="auction-bid">
-          <span className="eyebrow">{t('Tertinggi')}</span>
-          <b>{money(a.bid)}</b>
-          <span className="muted">{a.bidder ? name(a.bidder) : t('belum ada')}</span>
+        <div className={`auction-high ${leader ? 'has' : ''}`} key={a.bid}>
+          <span className="auction-kicker">{t('Tertinggi')}</span>
+          <b className="auction-amount">{money(a.bid)}</b>
+          <span className="auction-leader">
+            {leader ? (
+              <>
+                <TokenBadge token={leader.token} color={leader.color} size={16} /> {leader.name}
+              </>
+            ) : (
+              t('belum ada')
+            )}
+          </span>
         </div>
       </div>
-      <div className="chips">
-        {a.active.map((id, k) => (
-          <span key={id} className={`chip ${k === a.turn ? 'accent' : ''}`}>
-            {name(id)}
-          </span>
-        ))}
+
+      <div className="auction-bidders">
+        {a.active.map((id, k) => {
+          const p = state.players.find((q) => q.id === id);
+          return (
+            <span key={id} className={`auction-bidder ${k === a.turn ? 'turn' : ''} ${a.bidder === id ? 'lead' : ''}`} style={{ ['--c' as string]: p?.color ?? '#94a3b8' }}>
+              {p && <TokenBadge token={p.token} color={p.color} size={16} />}
+              <span>{name(id)}</span>
+              {k === a.turn && <span className="auction-dot" aria-label={t('Giliran menawar')} />}
+            </span>
+          );
+        })}
       </div>
+
       {myTurn && (
-        <div className="dock-actions">
-          {[10, 50, 100].map((inc) => (
-            <button key={inc} className="btn sm" onClick={() => setBid(a.bid + inc)}>
-              +{money(inc)}
+        <div className="auction-controls">
+          <div className="auction-quick">
+            {[10, 50, 100].map((inc) => (
+              <button key={inc} className="auction-chip" disabled={a.bid + inc > limit} onClick={() => setBid(a.bid + inc)}>
+                +{money(inc)}
+              </button>
+            ))}
+          </div>
+          <div className="auction-input">
+            <MoneyInput theme={theme} value={bid} onChange={setBid} max={limit} label={t('Nilai tawaran')} />
+          </div>
+          <div className="auction-go">
+            <button className="btn primary" disabled={bid <= a.bid || bid > limit} onClick={() => act({ type: 'bid', amount: Math.floor(bid) })}>
+              <Gavel size={16} /> {t('Tawar {amount}', { amount: money(bid) })}
             </button>
-          ))}
-          <MoneyInput theme={theme} value={bid} onChange={setBid} max={limit} label={t('Nilai tawaran')} />
-          <button className="btn primary" disabled={bid <= a.bid || bid > limit} onClick={() => act({ type: 'bid', amount: Math.floor(bid) })}>
-            <Gavel size={16} /> {t('Tawar {amount}', { amount: money(bid) })}
-          </button>
-          <button className="btn" onClick={() => act({ type: 'pass' })}>
-            {t('Lewat')}
-          </button>
+            <button className="btn auction-pass" onClick={() => act({ type: 'pass' })}>
+              {t('Lewat')}
+            </button>
+          </div>
+          <span className="auction-limit">{t('Maks. tawaranmu {amount}', { amount: money(limit) })}</span>
         </div>
       )}
     </div>

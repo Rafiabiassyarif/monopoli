@@ -15,7 +15,7 @@ import {
   type GameState,
   type Theme,
 } from '@monopoli/engine';
-import { cardLine, tileName } from '../names';
+import { cardFace, tileName } from '../names';
 import { FONT, tilePos } from './layout';
 import { DECK_Y, ISLAND_Y } from './Island';
 import { t, tr, useLang } from '../i18n';
@@ -348,14 +348,15 @@ export interface CardDraw {
   key: number;
   deck: 'chance' | 'community';
   id: string;
+  player: string;
   delay: number;
 }
 
 /** Kartu terangkat dari tumpukan, terbang ke depan kamera sambil dibalik, ditahan, lalu kembali ke bawah tumpukan. */
-export function DrawnCard({ draw, theme, state, onDone }: { draw: CardDraw; theme: Theme; state: Pick<GameState, 'cardDefs' | 'options'>; onDone: () => void }) {
+export function DrawnCard({ draw, theme, state, me, onDone }: { draw: CardDraw; theme: Theme; state: Pick<GameState, 'cardDefs' | 'options' | 'players'>; me: string | null; onDone: () => void }) {
   const { camera } = useThree();
   const label = tr(draw.deck === 'chance' ? theme.deckNames.chance : theme.deckNames.community);
-  const front = useMemo(() => frontTexture(draw.deck, label, cardLine(state, theme, draw.deck, draw.id)), [draw.key]);
+  const front = useMemo(() => frontTexture(draw.deck, label, cardFace(state, theme, { deck: draw.deck, card: draw.id, player: draw.player }, me).text), [draw.key]);
   const back = useMemo(() => backTexture(draw.deck, label), [draw.key]);
   useEffect(
     () => () => {
@@ -650,7 +651,7 @@ export function useEventFx(state: GameState | null, stepMs: number, theme: Theme
     const newCards: CardDraw[] = [];
     const newFlights: Flight[] = [];
     for (const e of fresh) {
-      if (e.type === 'card') newCards.push({ key: e.seq, deck: e.deck, id: e.card, delay });
+      if (e.type === 'card') newCards.push({ key: e.seq, deck: e.deck, id: e.card, player: e.player, delay });
       if (e.type === 'pay' && e.amount > 0) {
         newFlights.push({ key: e.seq, from: pos(e.from), to: pos(e.to), count: Math.min(6, 1 + Math.floor(e.amount / 80)), delay: e.reason === 'go' ? 0 : delay });
       }

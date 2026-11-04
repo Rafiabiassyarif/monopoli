@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BOARD, formatMoney, isOwnable, rentFor, taxFor, type GameEvent, type GameState, type Theme } from '@monopoli/engine';
 import { Flag, TokenBadge } from './ui';
 import { t, tr, useLang } from './i18n';
-import { cardLine, tileName } from './names';
+import { cardFace, tileName } from './names';
 import { DICE_MS, fx } from './scene/busy';
 import { tileAnimFor, tileAnimOn, type TileAnimInfo } from './tileAnims';
 
@@ -39,6 +39,7 @@ interface CardShow {
   key: number;
   deck: 'chance' | 'community';
   id: string;
+  player: string;
 }
 interface TileFx {
   key: number;
@@ -118,7 +119,7 @@ function useBoardFx(state: GameState | null, theme: Theme, stepMs: number) {
           }
         }
       } else if (e.type === 'card') {
-        const c: CardShow = { key: e.seq, deck: e.deck, id: e.card };
+        const c: CardShow = { key: e.seq, deck: e.deck, id: e.card, player: e.player };
         at(tl, () => setCard(c));
         at(tl + CARD_MS, () => setCard((x) => (x?.key === c.key ? null : x)));
         tl += CARD_MS;
@@ -193,6 +194,7 @@ export function Board2D({
   onHover,
   bottomInset = 0,
   stepMs = 220,
+  me = null,
 }: {
   state: GameState | null;
   theme: Theme;
@@ -202,13 +204,15 @@ export function Board2D({
   onHover: (i: number | null) => void;
   bottomInset?: number;
   stepMs?: number;
+  /** pemain di layar ini (online) — isi kartu orang lain disembunyikan */
+  me?: string | null;
 }) {
   useLang();
   const v = theme.visual;
   const { shown, rolling, dice, card, landing, floats, tileFx } = useBoardFx(state, theme, stepMs);
   const cur = state ? state.players[state.current] : null;
   const deckName = (d: 'chance' | 'community') => tr(d === 'chance' ? theme.deckNames.chance : theme.deckNames.community);
-  const cardTextNow = card && state ? cardLine(state, theme, card.deck, card.id) : '';
+  const face = card && state ? cardFace(state, theme, { deck: card.deck, card: card.id, player: card.player }, me) : null;
   const landTile = landing ? BOARD[landing.tile] : null;
 
   return (
@@ -307,10 +311,10 @@ export function Board2D({
             ) : null}
           </div>
 
-          {card && cardTextNow && (
-            <div key={card.key} className={`b2-card ${card.deck}`} role="status">
+          {card && face && (
+            <div key={card.key} className={`b2-card ${card.deck} ${face.hidden ? 'hidden' : ''}`} role="status">
               <div className="b2-card-head">{deckName(card.deck)}</div>
-              <p>{cardTextNow}</p>
+              <p>{face.text}</p>
             </div>
           )}
         </div>

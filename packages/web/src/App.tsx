@@ -227,7 +227,7 @@ export function App() {
       <div className="scene">
         {flat ? (
           screen === 'game' ? (
-            <Board2D state={state} theme={theme} selected={selected} hovered={hovered} onTile={setSelected} onHover={setHovered} bottomInset={dockH} stepMs={220 / speed} />
+            <Board2D state={state} theme={theme} selected={selected} hovered={hovered} onTile={setSelected} onHover={setHovered} bottomInset={dockH} stepMs={220 / speed} me={mode === 'online' ? online.me : null} />
           ) : (
             <div className="scene-loading" style={{ background: `linear-gradient(${theme.visual.sky[0]}, ${theme.visual.sky[1]})` }} aria-hidden />
           )
@@ -247,6 +247,7 @@ export function App() {
             bottomInset={dockH}
             idle={screen !== 'game'}
             onLowFps={() => !lowFpsSeen() && setLowFps(true)}
+            me={mode === 'online' ? online.me : null}
           />
         </Suspense>
         </SceneGuard>
