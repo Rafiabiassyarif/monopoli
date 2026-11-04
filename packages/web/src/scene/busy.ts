@@ -26,7 +26,14 @@ export function trackBusy(state: GameState | null, stepMs: number) {
   const fresh = state.events.filter((e) => e.seq > trackedSeq);
   trackedSeq = state.seq;
   let wait = landingDelay(fresh, stepMs);
-  if (fresh.some((e) => e.type === 'card')) wait += 2600; // beri waktu membaca kartu
+  const cards = fresh.filter((e) => e.type === 'card').length;
+  if (cards) {
+    wait += 2600 * cards; // beri waktu membaca kartu
+    // langkah setelah kartu ("maju ke petak X", stasiun terdekat) & lemparan dadu ulang (utilitas terdekat)
+    const moves = fresh.filter((e) => e.type === 'move' && !e.direct);
+    const extra = moves.slice(1).reduce((n, e) => (e.type === 'move' ? n + ((e.to - e.from + 40) % 40) : n), 0);
+    wait += extra * stepMs + Math.max(0, fresh.filter((e) => e.type === 'dice').length - 1) * DICE_MS;
+  }
   fx.busyUntil = Math.max(fx.busyUntil, performance.now() + wait);
 }
 export const resetBusy = () => {

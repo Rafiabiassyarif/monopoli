@@ -35,6 +35,8 @@ import { AccountDialog, AuthDialog, Avatar, DmDialog, FriendsPage, InviteDialog,
 import { t, tj, tr, useLang } from './i18n';
 import { armMusic, setMusicMood } from './music';
 import { Board2D } from './Board2D';
+import { ThemeCards } from './ThemeCards';
+import { sampleTheme } from './themeSample';
 import { setTipsOn } from './tips';
 import { markSceneCrashed, setBoard2d, useBoard2d } from './boardMode';
 import { getRaw as getStore, setRaw as setStore } from './storage';
@@ -131,7 +133,7 @@ export function App() {
   useEffect(() => setJSON('monopoli.speed', speed), [speed]);
   useEffect(() => setJSON('monopoli.cam', camMode), [camMode]);
 
-  const local = useLocalGame(onError, themeId);
+  const local = useLocalGame(onError, themeId, auth.user?.username);
   const online = useOnline(onError);
   const [mode, setMode] = useState<'local' | 'online'>('local');
   const [selected, setSelected] = useState<number | null>(null);
@@ -213,7 +215,7 @@ export function App() {
     setMode('local');
     setLastSetup(s);
     setSelected(null);
-    local.start(s);
+    local.start(s, theme.decks); // kartu kustom tema JSON (kalau ada)
     setScreen('game');
   };
 
@@ -224,7 +226,7 @@ export function App() {
       <div className="scene">
         {flat ? (
           screen === 'game' ? (
-            <Board2D state={state} theme={theme} selected={selected} hovered={hovered} onTile={setSelected} onHover={setHovered} bottomInset={dockH} />
+            <Board2D state={state} theme={theme} selected={selected} hovered={hovered} onTile={setSelected} onHover={setHovered} bottomInset={dockH} stepMs={220 / speed} />
           ) : (
             <div className="scene-loading" style={{ background: `linear-gradient(${theme.visual.sky[0]}, ${theme.visual.sky[1]})` }} aria-hidden />
           )
@@ -334,7 +336,7 @@ export function App() {
                 </div>
               </div>
 
-              {hasSave() && (
+              {hasSave(auth.user?.username) && (
                 <button
                   className="resume-strip"
                   onClick={() => {
@@ -1078,7 +1080,7 @@ function OnlineLobby({
 
 // ================= Studio tema =================
 
-type Tab = 'info' | 'tiles' | 'look' | 'json';
+type Tab = 'info' | 'tiles' | 'look' | 'cards' | 'json';
 const STYLES: Theme['visual']['buildings'][] = ['tropical', 'modern', 'classic', 'onion', 'pagoda', 'ninja'];
 const STYLE_LABEL: Record<string, string> = { tropical: 'Tropis', modern: 'Modern', classic: 'Klasik Eropa', onion: 'Kubah bawang', pagoda: 'Pagoda', ninja: 'Desa ninja' };
 const LANDMARK_LABEL: Record<string, string> = {
@@ -1140,7 +1142,8 @@ function ThemeStudio({ custom, onSave, onUse, onBack, onError }: { custom: Theme
             </button>
           ))}
         </div>
-        <label className="btn block">
+        <div className="row">
+        <label className="btn grow">
           <Upload size={16} /> {t('Impor file tema (.json)')}
           <input
             type="file"
@@ -1160,6 +1163,10 @@ function ThemeStudio({ custom, onSave, onUse, onBack, onError }: { custom: Theme
             }}
           />
         </label>
+        <button className="btn" onClick={() => download(sampleTheme())} title={t('Contoh tema lengkap dengan kartu & efek buatan sendiri')}>
+          <Download size={16} /> {t('Unduh contoh JSON')}
+        </button>
+        </div>
         {custom.length > 0 && (
           <>
             <span className="eyebrow">{t('Tema kustom kamu')}</span>
@@ -1202,6 +1209,7 @@ function ThemeStudio({ custom, onSave, onUse, onBack, onError }: { custom: Theme
           { v: 'info', label: t('Identitas') },
           { v: 'tiles', label: t('Nama petak') },
           { v: 'look', label: t('Tampilan') },
+          { v: 'cards', label: t('Kartu & efek') },
           { v: 'json', label: 'JSON' },
         ]}
       />
@@ -1350,6 +1358,8 @@ function ThemeStudio({ custom, onSave, onUse, onBack, onError }: { custom: Theme
           </Field>
         </div>
       )}
+
+      {tab === 'cards' && <ThemeCards draft={draft} up={up} />}
 
       {tab === 'json' && (
         <>

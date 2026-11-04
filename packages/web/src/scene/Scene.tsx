@@ -394,7 +394,7 @@ function SceneFx({ state, theme, stepMs }: { state: GameState; theme: Theme; ste
   return (
     <>
       {cards.slice(0, 1).map((c) => (
-        <DrawnCard key={c.key} draw={c} theme={theme} onDone={() => doneCard(c.key)} />
+        <DrawnCard key={c.key} draw={c} theme={theme} state={state} onDone={() => doneCard(c.key)} />
       ))}
       <MoneyFlights flights={flights} symbol={theme.currency.symbol} onDone={doneFlight} />
       {anims.map((a) => (

@@ -131,9 +131,9 @@ export function MoneyInput({ theme, value, onChange, max, label }: { theme: Them
         min={0}
         step={m}
         max={max !== undefined ? max * m : undefined}
-        value={value * m}
+        value={+(value * m).toFixed(4)}
         aria-label={label}
-        onChange={(e) => onChange(Math.max(0, Math.floor(+e.target.value / m)))}
+        onChange={(e) => onChange(Math.max(0, Math.floor(+e.target.value / m + 1e-6)))}
       />
       {u.after && <span className="muted">{u.after}</span>}
     </span>

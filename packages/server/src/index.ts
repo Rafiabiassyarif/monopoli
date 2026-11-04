@@ -563,6 +563,7 @@ function handle(ws: WebSocket, ctx: Ctx, raw: string) {
         room.seats.map((s) => ({ id: s.id, name: s.name, color: s.color, token: s.token, bot: s.bot })),
         randomBytes(4).readInt32LE(0),
         room.rules,
+        room.customTheme?.decks, // kartu kustom tema JSON host (sudah divalidasi saat dipilih)
       );
       room.afkKey = '';
       room.recorded = false;

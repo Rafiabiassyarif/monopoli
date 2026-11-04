@@ -8,6 +8,7 @@ import { BOARD, CHANCE, COMMUNITY, THEMES, tileName } from '@monopoli/engine';
 import { EN } from '../src/i18n.en';
 import { setLang, tr } from '../src/i18n';
 import { tileAnimFor } from '../src/tileAnims';
+import { tileName as shownName } from '../src/names';
 
 const SRC = fileURLToPath(new URL('../src/', import.meta.url));
 const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
@@ -64,6 +65,18 @@ describe('i18n bahasa Inggris', () => {
     } finally {
       setLang('id');
     }
+  });
+
+  it('nama petak & nama kartu di papan ikut bahasa (tidak campur Indonesia–Inggris)', () => {
+    const ID_WORDS = /\b(Stasiun|Pelabuhan|Bandara|Pajak|Penjara|Kesempatan|Dana Umum|Kas|Dusun|Kampung|Klan|Lapangan|Gerbang|Perusahaan|Parkir|Masuk|Benteng|Danau|Hutan|Kuil|Istana)\b/;
+    const EN_WORDS = /\b(Chance|Community Chest|Jail|Free Parking|Go To Jail|Income Tax|Luxury Tax|Super Tax|Electric Company|Water Works)\b/;
+    setLang('en');
+    try {
+      for (const th of THEMES) BOARD.forEach((_, i) => expect(shownName(th, i), `${th.id} #${i}`).not.toMatch(ID_WORDS));
+    } finally {
+      setLang('id');
+    }
+    for (const th of THEMES) BOARD.forEach((_, i) => expect(shownName(th, i), `${th.id} #${i}`).not.toMatch(EN_WORDS));
   });
 
   it('placeholder {…} dan token kartu {m:N}/{t:N} sama di terjemahan', () => {

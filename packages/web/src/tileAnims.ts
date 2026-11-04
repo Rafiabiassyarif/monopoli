@@ -58,6 +58,8 @@ export interface TileAnimInfo {
   caption: string;
   /** warna utama opsional (mis. warna bulu burung, bunga) */
   color?: string;
+  /** true = dari tileFx tema JSON pemain (keterangan ditampilkan apa adanya, tidak diterjemahkan) */
+  own?: boolean;
 }
 
 /** Keterangan bawaan per animasi (dipakai kalau nama petak tidak punya keterangan khusus). */
@@ -179,6 +181,10 @@ const BY_NAME: Record<string, Entry> = {
   'Super Tax': 'diamond',
   Jail: 'bars',
   'Free Parking': ['car', 'Parkir gratis'],
+  'Perusahaan Listrik': 'lightning',
+  'Perusahaan Air': 'water',
+  'Pajak Super': 'diamond',
+  'Parkir Gratis': ['car', 'Parkir gratis'],
 
   // ===== Rusia =====
   Murmansk: ['aurora', 'Aurora di langit Murmansk'],
@@ -336,6 +342,13 @@ const expand = (e: Entry): TileAnimInfo => {
 /** Animasi untuk petak `i` di tema ini. null = petak tanpa animasi khusus (Kesempatan/Dana Umum sudah punya animasi kartu). */
 export function tileAnimFor(theme: Theme, i: number): TileAnimInfo | null {
   const t = BOARD[i];
+  // efek kustom dari tema JSON pemain: { "12": { "anim": "fireworks", "emoji": "🎆", "caption": "Pesta!" } }
+  const own = theme.tileFx?.[String(i)];
+  if (own) {
+    const id = own.anim && own.anim in BASE ? (own.anim as AnimId) : null;
+    const base = id ? BASE[id] : null;
+    if (id || own.emoji) return { id: id ?? 'stars', emoji: own.emoji ?? base![0], caption: own.caption ?? base?.[1] ?? '', color: own.color, own: true };
+  }
   if (t.kind === 'chance' || t.kind === 'community') return null;
   const name = tileName(theme, i);
   const hit = BY_NAME[name];

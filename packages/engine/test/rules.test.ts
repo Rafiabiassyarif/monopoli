@@ -268,10 +268,18 @@ describe('uang realistis per negara', () => {
     expect(fm(th('indonesia'), 1500)).toBe('Rp1,5 M');
     expect(fm(th('indonesia'), 400)).toBe('Rp400 jt');
     expect(fm(th('indonesia'), 1537)).toBe('Rp1,537 M'); // tetap tepat, tidak dibulatkan
-    expect(fm(th('usa'), 400)).toBe('$400K');
-    expect(fm(th('uk'), 1500)).toBe('£1.5m');
-    expect(fm(th('japan'), 400)).toBe('¥4000万');
     expect(fm(th('indonesia'), -50)).toBe('−Rp50 jt');
+    expect(fm(th('usa'), 2000)).toBe('$111K');
+    expect(fm(th('uk'), 2000)).toBe('£83K');
+  });
+  it('nilai uang setara Rupiah di semua negara (Rp2 M di Indonesia = nilai yang sama di UK)', () => {
+    // kurs ±: $1 = Rp18.032, £1 = Rp24.110, ¥1 = Rp114,35, ₽1 = Rp216
+    const rupiah = { usa: 18_032, uk: 24_110, japan: 114.35, russia: 216 } as const;
+    for (const [id, rate] of Object.entries(rupiah)) {
+      const c = th(id).currency;
+      const inRupiah = 2000 * c.multiplier * rate; // 2000 satuan = Rp2 M
+      expect(Math.abs(inRupiah / 2e9 - 1), id).toBeLessThan(0.01);
+    }
   });
   it('tema kustom versi lama (tanpa compact) tetap tampil seperti dulu', () => {
     const old = { ...th('indonesia'), currency: { symbol: 'Rp', suffix: 'rb', multiplier: 10, locale: 'id-ID' } };
@@ -280,7 +288,8 @@ describe('uang realistis per negara', () => {
   });
   it('kolom isian uang memakai satuan tampilan', () => {
     expect(moneyUnit(th('indonesia'))).toEqual({ before: 'Rp', after: 'jt', step: 1 });
-    expect(moneyUnit(th('usa'))).toEqual({ before: '$', after: 'K', step: 1 });
+    expect(moneyUnit(th('usa'))).toEqual({ before: '$', after: 'K', step: 0.0555 });
+    expect(moneyUnit(th('ninja'))).toEqual({ before: '', after: 'K 両', step: 1 });
   });
 });
 

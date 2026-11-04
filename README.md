@@ -85,6 +85,31 @@ Build web juga PWA: bisa di-"Install" dan main lokal tetap jalan offline.
 Bawaan: Indonesia, Amerika, Rusia, Jepang, Inggris, Negeri Ninja (dunia ninja orisinal). Studio Tema: mulai dari tema bawaan → ubah identitas, nama petak, warna, gaya bangunan → Simpan. Ekspor/impor `.json`. Tema kustom ikut terkirim ke pemain di room online.
 Tema anime/kartun: pakai nama parodi/fan-made, tanpa logo/gambar resmi bila dipublikasikan.
 
+### Tema JSON dengan kartu & efek sendiri
+
+Contoh lengkap: [`contoh-tema-kustom.json`](contoh-tema-kustom.json) (juga tombol **Unduh contoh JSON** di Studio tema). Impor lewat **Studio tema → Impor file tema (.json)**, atau edit di tab **Kartu & efek** / **JSON**. Batas file 100 KB; semua isi divalidasi di browser dan di server.
+
+Field tambahan (semua opsional):
+
+- `decks.chance` / `decks.community` — 1–30 kartu `{ "text": "...", "effect": {...} }`, mengganti kartu bawaan tumpukan itu. Di teks: `{m:100}` = uang (satuan engine, 1 = Rp1 jt), `{m:go}` = gaji START, `{t:39}` = nama petak.
+- `cards` — ganti teks kartu bawaan saja (kunci `c1`..`c16`, `d1`..`d16`), efek tetap.
+- `tileFx` — efek saat mendarat di petak, kunci nomor petak `"0"`..`"39"`: `{ "anim": "fireworks", "emoji": "🎆", "caption": "Pesta!" }`. `anim` opsional (tanpa `anim` = emoji saja).
+
+| `effect.kind` | Isian | Arti |
+|---|---|---|
+| `money` | `amount` −1000..1000 | + terima dari bank, − bayar ke bank |
+| `eachPlayer` | `amount` −500..500 | + terima dari tiap pemain, − bayar ke tiap pemain |
+| `advance` | `to` 0..39 | maju ke petak (lewat START dapat gaji) |
+| `nearest` | `target` `station`/`utility` | maju ke terdekat; kalau dimiliki: stasiun sewa 2x, utilitas 10x dadu |
+| `back` | `steps` 1..12 | mundur |
+| `jail` | — | masuk penjara |
+| `jailFree` | — | kartu bebas penjara (disimpan) |
+| `repairs` | `house` 0..500, `hotel` 0..1000 | bayar per rumah & hotel |
+
+Id animasi `anim`: horse, bird, deer, volcano, dancer, ship, fish, oilpump, equator, boats, bridge, clock, boatrace, durian, doors, wayang, becak, fruit, sharkcroc, notes, monkeys, fireworks, train, plane, metro, lightning, water, coins, diamond, money, bars, siren, steam, rocket, snow, aurora, rain, desert, blossom, car, stars, bear, flag.
+
+Main online: kartu & efek tema milik host dipakai semua pemain di room itu.
+
 ## Test
 
     npm test          # aturan resmi + game bot penuh + server (akun, email, teman, chat, admin, penonton, main cepat)

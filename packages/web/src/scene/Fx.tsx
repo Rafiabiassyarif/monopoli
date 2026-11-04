@@ -7,18 +7,15 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   BOARD,
-  CHANCE,
-  COMMUNITY,
-  cardText,
   formatMoney,
   isOwnable,
   rentFor,
   taxFor,
-  tileName,
   type GameEvent,
   type GameState,
   type Theme,
 } from '@monopoli/engine';
+import { cardLine, tileName } from '../names';
 import { FONT, tilePos } from './layout';
 import { DECK_Y, ISLAND_Y } from './Island';
 import { t, tr, useLang } from '../i18n';
@@ -257,10 +254,24 @@ function backTexture(deck: 'chance' | 'community', label: string) {
     g.fillStyle = '#fff';
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.font = `160px ${FONT}`;
-    g.fillText(deck === 'chance' ? '?' : '★', w / 2, h / 2 - 40);
-    g.font = `800 52px ${FONT}`;
-    g.fillText(label.toUpperCase(), w / 2, h - 110);
+    // nama tumpukan sebesar mungkin tapi tetap muat (1–2 baris)
+    const up = label.toUpperCase();
+    g.font = `900 84px ${FONT}`;
+    const words = up.split(' ');
+    const twoLines = words.length > 1 && g.measureText(up).width > w - 110;
+    let size = twoLines ? 64 : 84;
+    g.font = `900 ${size}px ${FONT}`;
+    g.save();
+    g.font = `${twoLines ? 130 : 160}px ${FONT}`;
+    g.fillText(deck === 'chance' ? '?' : '★', w / 2, twoLines ? 165 : h / 2 - 40);
+    g.restore();
+    const lines = twoLines ? [words.slice(0, Math.ceil(words.length / 2)).join(' '), words.slice(Math.ceil(words.length / 2)).join(' ')] : [up];
+    const widest = () => Math.max(...lines.map((l) => g.measureText(l).width));
+    while (size > 40 && widest() > w - 110) g.font = `900 ${(size -= 4)}px ${FONT}`;
+    g.shadowColor = 'rgba(0,0,0,.25)';
+    g.shadowOffsetY = 4;
+    lines.forEach((l, k) => g.fillText(l, w / 2, h - 120 - (lines.length - 1 - k) * size * 1.05));
+    g.shadowColor = 'transparent';
   });
 }
 
@@ -341,11 +352,10 @@ export interface CardDraw {
 }
 
 /** Kartu terangkat dari tumpukan, terbang ke depan kamera sambil dibalik, ditahan, lalu kembali ke bawah tumpukan. */
-export function DrawnCard({ draw, theme, onDone }: { draw: CardDraw; theme: Theme; onDone: () => void }) {
+export function DrawnCard({ draw, theme, state, onDone }: { draw: CardDraw; theme: Theme; state: Pick<GameState, 'cardDefs' | 'options'>; onDone: () => void }) {
   const { camera } = useThree();
-  const card = (draw.deck === 'chance' ? CHANCE : COMMUNITY).find((c) => c.id === draw.id)!;
   const label = tr(draw.deck === 'chance' ? theme.deckNames.chance : theme.deckNames.community);
-  const front = useMemo(() => frontTexture(draw.deck, label, cardText(theme, card.id, t(card.text))), [draw.key]);
+  const front = useMemo(() => frontTexture(draw.deck, label, cardLine(state, theme, draw.deck, draw.id)), [draw.key]);
   const back = useMemo(() => backTexture(draw.deck, label), [draw.key]);
   useEffect(
     () => () => {

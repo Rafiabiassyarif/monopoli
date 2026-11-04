@@ -47,7 +47,6 @@ import {
   canMortgage,
   canSell,
   canUnmortgage,
-  cardText,
   formatMoney,
   groupTiles,
   isOwnable,
@@ -63,14 +62,15 @@ import {
   tradeInterest,
   maxBid,
   rentFor,
-  tileName,
   unmortgageCost,
   type Action,
   type GameEvent,
   type GameState,
   type Theme,
 } from '@monopoli/engine';
+import { cardLine, tileName } from './names';
 import { isMuted, setMuted, sfx } from './sfx';
+import { MusicLink } from './MusicLink';
 import { musicOn, musicVolume, setMusicOn, setMusicVolume } from './music';
 import { playTileAnim, setTileAnimOn, tileAnimAt, tileAnimOn } from './tileAnims';
 import { markTip, pickTip, setTipsOn, tipsOn } from './tips';
@@ -223,8 +223,7 @@ export function Hud(props: Props) {
       case 'free':
         return { icon: '🔓', text: t('{name} bebas dari penjara', { name: name(e.player) }) };
       case 'card': {
-        const c = (e.deck === 'chance' ? CHANCE : COMMUNITY).find((x) => x.id === e.card)!;
-        return { icon: e.deck === 'chance' ? '❓' : '🎁', text: `${name(e.player)}: ${cardText(theme, c.id, t(c.text))}` };
+        return { icon: e.deck === 'chance' ? '❓' : '🎁', text: `${name(e.player)}: ${cardLine(state, theme, e.deck, e.card)}` };
       }
       case 'auction':
         return {
@@ -843,7 +842,7 @@ function TileCard({ i, state, theme, me, canManage, act, onClose }: { i: number;
           a && (
             <button className="anim-play" onClick={() => playTileAnim(i)} title={t('Putar animasi khas petak ini')}>
               <span aria-hidden>{a.emoji}</span>
-              <span className="truncate grow">{tr(a.caption)}</span>
+              <span className="truncate grow">{a.own ? a.caption : tr(a.caption)}</span>
               <Play size={14} />
             </button>
           )
@@ -1279,6 +1278,7 @@ export function SettingsBody({ camMode, setCamMode, speed, setSpeed }: { camMode
         <span className="field-label">{t('Animasi khas petak (kuda di Kupang, kapal di Makassar, …)')}</span>
         {onOff(anim, (v) => (setTileAnimOn(v), setAnim(v)))}
       </div>
+      {!flat && (
       <div className="field">
         <span className="field-label">{t('Kamera')}</span>
         <Seg
@@ -1291,6 +1291,7 @@ export function SettingsBody({ camMode, setCamMode, speed, setSpeed }: { camMode
           ]}
         />
       </div>
+      )}
       <div className="field">
         <span className="field-label">{t('Kecepatan animasi')}</span>
         <Seg
@@ -1350,6 +1351,7 @@ export function SettingsBody({ camMode, setCamMode, speed, setSpeed }: { camMode
             />
           )}
         </div>
+        {music && <MusicLink />}
       </div>
       <div className="field">
         <span className="field-label">

@@ -2,7 +2,7 @@
 // Server online & mode lokal memakai fungsi yang sama, jadi aturan tidak bisa beda.
 
 import { BOARD, GROUP_COUNT, JAIL_INDEX, STATION_RENT, groupTiles, isOwnable } from './board';
-import { CHANCE, COMMUNITY, type CardDef } from './cards';
+import { CHANCE, COMMUNITY, buildCustomDecks, type CardDef, type CustomDecks } from './cards';
 
 export type Phase = 'roll' | 'buy' | 'auction' | 'debt' | 'end' | 'gameover';
 
@@ -203,6 +203,8 @@ export interface GameState {
   trade: Trade | null;
   pot: number;
   decks: { chance: string[]; community: string[] };
+  /** kartu kustom dari tema JSON (teks + efek). Tidak ada = kartu bawaan. */
+  cardDefs?: { chance?: CardDef[]; community?: CardDef[] };
   lastCard: { deck: Deck; id: string } | null;
   events: GameEvent[];
   seq: number;
@@ -266,7 +268,7 @@ function shuffle<T>(s: GameState, arr: T[]): T[] {
 }
 
 // ---------- setup ----------
-export function createGame(players: NewPlayer[], seed = Date.now(), options: Partial<Options> = {}): GameState {
+export function createGame(players: NewPlayer[], seed = Date.now(), options: Partial<Options> = {}, customDecks?: CustomDecks): GameState {
   if (players.length < 2 || players.length > 8) throw new RuleError('Pemain harus 2-8 orang');
   const opts = sanitizeOptions({ ...DEFAULT_OPTIONS, ...options });
   const s: GameState = {
@@ -308,8 +310,10 @@ export function createGame(players: NewPlayer[], seed = Date.now(), options: Par
     endReason: null,
     options: opts,
   };
-  s.decks.chance = shuffle(s, CHANCE.map((c) => c.id));
-  s.decks.community = shuffle(s, COMMUNITY.map((c) => c.id));
+  const custom = buildCustomDecks(customDecks);
+  if (custom.chance || custom.community) s.cardDefs = { ...(custom.chance && { chance: custom.chance }), ...(custom.community && { community: custom.community }) };
+  s.decks.chance = shuffle(s, cardsOf(s, 'chance').map((c) => c.id));
+  s.decks.community = shuffle(s, cardsOf(s, 'community').map((c) => c.id));
   if (opts.freeParkingPot) s.pot = opts.freeParkingStart;
   if (opts.shortGame) {
     // Permainan Singkat resmi: kocok akta, bagikan 2 ke tiap pemain, masing-masing bayar harga ke bank
@@ -545,16 +549,23 @@ function doMortgage(s: GameState, p: Player, tile: number) {
   emit(s, { type: 'mortgage', player: p.id, tile });
 }
 
-const JAIL_CARD: Record<Deck, string> = {
-  chance: CHANCE.find((c) => c.effect.kind === 'jailFree')!.id,
-  community: COMMUNITY.find((c) => c.effect.kind === 'jailFree')!.id,
-};
+/** Isi tumpukan kartu yang dipakai game ini (kustom dari tema, atau bawaan). */
+export function cardsOf(s: Pick<GameState, 'cardDefs'>, deck: Deck): CardDef[] {
+  return s.cardDefs?.[deck] ?? (deck === 'chance' ? CHANCE : COMMUNITY);
+}
+/** Definisi kartu berdasarkan id (untuk tampilan teks kartu di klien). */
+export function cardById(s: Pick<GameState, 'cardDefs'>, deck: Deck, id: string): CardDef | undefined {
+  return cardsOf(s, deck).find((c) => c.id === id);
+}
+/** id kartu bebas penjara di tumpukan ini (tumpukan kustom bisa tidak punya). */
+const jailCardId = (s: GameState, deck: Deck) => cardsOf(s, deck).find((c) => c.effect.kind === 'jailFree')?.id;
 
 /** Kembalikan satu kartu bebas penjara pemain ke bawah deknya. */
 function returnJailCard(s: GameState, p: Player) {
   const deck = p.jailCards.shift();
   p.jailFree = p.jailCards.length;
-  if (deck) s.decks[deck].push(JAIL_CARD[deck]);
+  const id = deck && jailCardId(s, deck);
+  if (deck && id) s.decks[deck].push(id);
 }
 
 /**
@@ -700,8 +711,9 @@ export function taxFor(s: GameState, pid: string, tile: number): number {
 
 function drawCard(s: GameState, p: Player, deck: Deck): void {
   const list = s.decks[deck];
-  const id = list.shift()!;
-  const card: CardDef = (deck === 'chance' ? CHANCE : COMMUNITY).find((c) => c.id === id)!;
+  const id = list.shift();
+  if (!id) return; // tumpukan kosong (semua kartu bebas penjara sedang dipegang)
+  const card: CardDef = cardById(s, deck, id) ?? cardsOf(s, deck)[0];
   // kartu bebas penjara dipegang pemain (keluar dari dek) sampai dipakai; kartu lain kembali ke bawah dek
   if (card.effect.kind !== 'jailFree') list.push(id);
   s.lastCard = { deck, id };
@@ -1158,14 +1170,16 @@ export function migrateState(raw: unknown): GameState {
   s.auctionQueue ??= [];
   s.afterAuction ??= false;
   s.options = sanitizeOptions({ ...DEFAULT_OPTIONS, ...s.options });
-  s.decks ??= { chance: CHANCE.map((c) => c.id), community: COMMUNITY.map((c) => c.id) };
+  s.decks ??= { chance: cardsOf(s, 'chance').map((c) => c.id), community: cardsOf(s, 'community').map((c) => c.id) };
   for (const p of s.players) {
     if (!Array.isArray(p.jailCards)) {
       p.jailCards = [];
       for (let k = 0; k < (p.jailFree ?? 0); k++) {
         // kartu yang dipegang dulu masih ada di dek → keluarkan supaya tidak dobel
-        const deck: Deck = s.decks.chance.includes(JAIL_CARD.chance) ? 'chance' : 'community';
-        s.decks[deck] = s.decks[deck].filter((id) => id !== JAIL_CARD[deck]);
+        const cid = jailCardId(s, 'chance');
+        const deck: Deck = cid && s.decks.chance.includes(cid) ? 'chance' : 'community';
+        const jid = jailCardId(s, deck);
+        s.decks[deck] = s.decks[deck].filter((id) => id !== jid);
         p.jailCards.push(deck);
       }
     }
@@ -1174,8 +1188,8 @@ export function migrateState(raw: unknown): GameState {
   }
   // kartu baru yang belum ada di save lama
   const held = (d: Deck) => s.players.some((p) => p.jailCards.includes(d));
-  for (const [deck, defs] of [['chance', CHANCE], ['community', COMMUNITY]] as const)
-    for (const c of defs) if (!s.decks[deck].includes(c.id) && !(c.effect.kind === 'jailFree' && held(deck))) s.decks[deck].push(c.id);
+  for (const deck of ['chance', 'community'] as const)
+    for (const c of cardsOf(s, deck)) if (!s.decks[deck].includes(c.id) && !(c.effect.kind === 'jailFree' && held(deck))) s.decks[deck].push(c.id);
   if (s.debt) s.debt.reason ??= 'debt';
   return s;
 }

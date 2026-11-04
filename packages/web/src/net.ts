@@ -22,6 +22,7 @@ import {
   type RoomInfo,
   type ServerMsg,
   type Theme,
+  type CustomDecks,
 } from '@monopoli/engine';
 
 export interface LocalSetup {
@@ -32,6 +33,8 @@ export interface LocalSetup {
 }
 
 const SAVE_KEY = 'monopoli.save';
+/** Save lokal dipisah per akun: tamu pakai kunci lama, akun login punya kunci sendiri. */
+export const saveKey = (owner?: string | null) => (owner ? `${SAVE_KEY}.u.${owner}` : SAVE_KEY);
 
 interface SaveFile {
   state: GameState;
@@ -41,44 +44,49 @@ interface SaveFile {
 }
 
 /** Baca save lokal; save rusak / versi tak cocok dibuang supaya tidak crash. */
-export function readSave(): SaveFile | null {
-  const raw = getJSON<SaveFile | null>(SAVE_KEY, null);
+export function readSave(key = SAVE_KEY): SaveFile | null {
+  const raw = getJSON<SaveFile | null>(key, null);
   if (!raw) return null;
   try {
     return { ...raw, state: migrateState(raw.state), level: raw.level ?? 'normal' };
   } catch {
-    del(SAVE_KEY);
+    del(key);
     return null;
   }
 }
 
-export function useLocalGame(onError: (m: string) => void, themeId: string) {
+export function useLocalGame(onError: (m: string) => void, themeId: string, owner?: string | null) {
   const [state, setState] = useState<GameState | null>(null);
   const [level, setLevel] = useState<BotLevel>('normal');
   const [savedTheme, setSavedTheme] = useState(themeId);
+  /** kunci save milik game yang sedang jalan (tetap walau user logout di tengah game) */
+  const [key, setKey] = useState(() => saveKey(owner));
   const ref = useRef(state);
   ref.current = state;
 
   const start = useCallback(
-    (s: LocalSetup) => {
+    (s: LocalSetup, decks?: CustomDecks) => {
       setLevel(s.botLevel);
       setSavedTheme(themeId);
+      setKey(saveKey(owner));
       const seed = crypto.getRandomValues(new Int32Array(1))[0];
-      setState(createGame(s.players, seed, s.rules));
+      setState(createGame(s.players, seed, s.rules, decks));
     },
-    [themeId],
+    [themeId, owner],
   );
 
   /** Lanjutkan save lokal. Mengembalikan id tema save (atau null kalau gagal). */
   const resume = useCallback((): string | null => {
-    const save = readSave();
+    const k = saveKey(owner);
+    const save = readSave(k);
     if (!save) return null;
+    setKey(k);
     setLevel(save.level);
     setState(save.state);
     const t = save.themeId ?? themeId;
     setSavedTheme(t);
     return t;
-  }, [themeId]);
+  }, [themeId, owner]);
 
   const send = useCallback(
     (pid: string, a: Action) => {
@@ -95,15 +103,15 @@ export function useLocalGame(onError: (m: string) => void, themeId: string) {
   // simpan otomatis
   useEffect(() => {
     if (state) {
-      if (state.phase === 'gameover') del(SAVE_KEY);
-      else setJSON(SAVE_KEY, { state, level, themeId: savedTheme } satisfies SaveFile);
+      if (state.phase === 'gameover') del(key);
+      else setJSON(key, { state, level, themeId: savedTheme } satisfies SaveFile);
     }
-  }, [state, level, savedTheme]);
+  }, [state, level, savedTheme, key]);
 
   return { state, start, resume, send, level, quit: () => setState(null) };
 }
 
-export const hasSave = () => getRaw(SAVE_KEY) !== null;
+export const hasSave = (owner?: string | null) => getRaw(saveKey(owner)) !== null;
 
 /** Jalankan bot (lokal) dengan jeda agar animasi terlihat. */
 export function useBotDriver(state: GameState | null, level: BotLevel, send: (pid: string, a: Action) => void, delay: number, paused: boolean) {

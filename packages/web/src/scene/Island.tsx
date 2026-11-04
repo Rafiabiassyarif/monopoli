@@ -161,45 +161,72 @@ function Cars({ colors, radius }: { colors: string[]; radius: number }) {
   );
 }
 
-/** perahu kecil yang berlayar mengelilingi pulau di kanal */
+/** jalur kanal: persegi dengan sudut membulat (superellipse), u 0..1 = satu putaran */
+function canalPoint(u: number, R: number): [number, number] {
+  const a = u * Math.PI * 2;
+  const n = 12;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [R * Math.sign(c) * Math.abs(c) ** (2 / n), R * Math.sign(s) * Math.abs(s) ** (2 / n)];
+}
+
+/** sail segitiga (bidang XY: sejajar badan kapal) */
+const SAIL = (() => {
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0);
+  sh.lineTo(-0.15, 0);
+  sh.lineTo(0, 0.22);
+  sh.closePath();
+  return new THREE.ShapeGeometry(sh);
+})();
+
+/** perahu kecil yang berlayar mengelilingi pulau di kanal — haluan (+X lokal) selalu menghadap arah jalan */
 function Boats({ colors }: { colors: string[] }) {
   const refs = useRef<(THREE.Group | null)[]>([]);
   const R = ISLAND_HALF + 0.55; // tengah kanal
   useFrame(({ clock }) => {
     refs.current.forEach((g, k) => {
       if (!g) return;
-      // jalur persegi-membulat: keliling dipetakan dari parameter u
       const u = (clock.elapsedTime * 0.025 + k / colors.length) % 1;
-      const side = Math.floor(u * 4);
-      const f = (u * 4) % 1;
-      const along = -R + f * 2 * R;
-      const pts: [number, number][] = [
-        [along, R],
-        [R, -along],
-        [-along, -R],
-        [-R, along],
-      ];
-      const [x, z] = pts[side];
+      const [x, z] = canalPoint(u, R);
+      const [nx, nz] = canalPoint(u + 0.003, R);
       g.position.set(x, WATER_Y + 0.02 + Math.sin(clock.elapsedTime * 2 + k) * 0.01, z);
-      g.rotation.y = -side * (Math.PI / 2) + Math.PI / 2;
-      g.rotation.z = Math.sin(clock.elapsedTime * 1.7 + k) * 0.05;
+      // rotasi y = θ memetakan +X lokal ke (cos θ, −sin θ) → arahkan ke titik berikutnya
+      g.rotation.y = Math.atan2(-(nz - z), nx - x);
+      g.rotation.x = Math.sin(clock.elapsedTime * 1.7 + k) * 0.05; // oleng kiri-kanan
     });
   });
   return (
     <>
       {colors.map((c, k) => (
         <group key={k} ref={(el) => (refs.current[k] = el)}>
-          <mesh position={[0, 0.03, 0]} castShadow>
-            <boxGeometry args={[0.32, 0.07, 0.13]} />
+          {/* badan */}
+          <mesh position={[-0.02, 0.03, 0]} castShadow>
+            <boxGeometry args={[0.26, 0.07, 0.13]} />
             <meshStandardMaterial color={c} roughness={0.5} />
           </mesh>
-          <mesh position={[0, 0.17, 0]}>
-            <cylinderGeometry args={[0.008, 0.008, 0.26, 4]} />
+          {/* haluan runcing di depan */}
+          <mesh position={[0.15, 0.03, 0]} rotation={[0, 0, -Math.PI / 2]} castShadow>
+            <coneGeometry args={[0.065, 0.1, 4, 1]} />
+            <meshStandardMaterial color={c} roughness={0.5} />
+          </mesh>
+          {/* geladak */}
+          <mesh position={[-0.02, 0.068, 0]}>
+            <boxGeometry args={[0.22, 0.008, 0.1]} />
+            <meshStandardMaterial color="#d6a46a" roughness={0.8} />
+          </mesh>
+          {/* tiang + layar (layar di belakang tiang, sejajar badan) */}
+          <mesh position={[0.02, 0.19, 0]}>
+            <cylinderGeometry args={[0.008, 0.008, 0.26, 5]} />
             <meshStandardMaterial color="#78350f" />
           </mesh>
-          <mesh position={[0.05, 0.18, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
-            <coneGeometry args={[0.08, 0.2, 3]} />
-            <meshStandardMaterial color="#fefce8" roughness={0.7} />
+          <mesh geometry={SAIL} position={[0.012, 0.08, 0]} castShadow>
+            <meshStandardMaterial color="#fefce8" roughness={0.7} side={THREE.DoubleSide} />
+          </mesh>
+          {/* bendera kecil di puncak tiang, berkibar ke belakang */}
+          <mesh position={[-0.01, 0.31, 0]}>
+            <boxGeometry args={[0.05, 0.025, 0.004]} />
+            <meshStandardMaterial color="#ef4444" />
           </mesh>
         </group>
       ))}

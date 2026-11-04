@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { BOARD, formatMoney, tileName, type Theme } from '@monopoli/engine';
 import { getCityInfo, drawLandmarkToCanvas } from '../cityLandmarks';
-import { t as tt, tr } from '../i18n';
+import { t as tt, tName, tr } from '../i18n';
 
 export const HALF = 6;
 const CORNER = 1.5;
@@ -227,7 +227,7 @@ export function makeBoardTexture(theme: Theme, hi = true): THREE.CanvasTexture {
         g.fillText('☕', 0, -0.12 * S);
         g.fillStyle = '#fff';
         g.font = `800 ${S * 0.16}px ${FONT}`;
-        wrap(g, name.toUpperCase(), s * 0.85).forEach((l, n) => g.fillText(l, 0, 0.18 * S + n * S * 0.16));
+        wrap(g, tName(name).toUpperCase(), s * 0.85).forEach((l, n) => g.fillText(l, 0, 0.18 * S + n * S * 0.16));
       } else if (t.kind === 'gotojail') {
         const rad = g.createRadialGradient(0, 0, 0, 0, 0, s * 0.45);
         rad.addColorStop(0, '#ef4444');
@@ -264,7 +264,7 @@ export function makeBoardTexture(theme: Theme, hi = true): THREE.CanvasTexture {
 
       g.fillStyle = '#0f172a';
       g.font = `800 ${S * 0.125}px ${FONT}`;
-      wrap(g, name.toUpperCase(), w - 8).forEach((l, n) => g.fillText(l, x0 + w / 2, y0 + 0.38 * S + n * S * 0.13));
+      wrap(g, tName(name).toUpperCase(), w - 8).forEach((l, n) => g.fillText(l, x0 + w / 2, y0 + 0.38 * S + n * S * 0.13));
 
       const cityInfo = getCityInfo(name, theme);
       drawLandmarkToCanvas(g, cityInfo, x0 + w / 2, y0 + 0.88 * S, w, 0.58 * S, gColor);
@@ -282,7 +282,7 @@ export function makeBoardTexture(theme: Theme, hi = true): THREE.CanvasTexture {
       const cityInfo = getCityInfo(name, theme);
       g.fillStyle = '#0f172a';
       g.font = `800 ${S * 0.12}px ${FONT}`;
-      wrap(g, name.toUpperCase(), w - 8).forEach((l, n) => g.fillText(l, x0 + w / 2, y0 + 0.24 * S + n * S * 0.13));
+      wrap(g, tName(name).toUpperCase(), w - 8).forEach((l, n) => g.fillText(l, x0 + w / 2, y0 + 0.24 * S + n * S * 0.13));
 
       if (t.kind === 'station' || t.kind === 'utility') {
         drawLandmarkToCanvas(g, cityInfo, x0 + w / 2, y0 + 0.84 * S, w, 0.62 * S, '#0284c7');

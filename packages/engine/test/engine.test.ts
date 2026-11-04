@@ -17,6 +17,8 @@ import {
   cardText,
   type GameState,
   type NewPlayer,
+  CHANCE,
+  COMMUNITY,
 } from '../src';
 
 const P = (n: number, bot = false): NewPlayer[] =>
@@ -200,6 +202,21 @@ describe('tema', () => {
   it('teks kartu memakai mata uang & nama petak tema', () => {
     const id = THEMES.find((t) => t.id === 'indonesia')!;
     expect(cardText(id, 'c13', 'Maju ke {t:39}. {m:200}').replace(/\u00a0/g, ' ')).toBe('Maju ke Jakarta. Rp200 jt');
+  });
+  it('kartu "Maju ke START" menyebut gaji sesuai aturan main', () => {
+    const id = THEMES.find((t) => t.id === 'indonesia')!;
+    const c1 = CHANCE.find((c) => c.id === 'c1')!;
+    expect(cardText(id, 'c1', c1.text, 300).replace(/\u00a0/g, ' ')).toBe('Maju ke START. Terima gaji Rp300 jt.');
+    expect(cardText(id, 'c1', c1.text).replace(/\u00a0/g, ' ')).toBe('Maju ke START. Terima gaji Rp200 jt.');
+  });
+  it('setiap token {t:N} di kartu menunjuk petak yang sama dengan efek kartu', () => {
+    for (const c of [...CHANCE, ...COMMUNITY]) {
+      const m = /\{t:(\d+)\}/.exec(c.text);
+      if (m) expect(c.effect, c.id).toMatchObject({ kind: 'advance', to: +m[1] });
+      const money = [...c.text.matchAll(/\{m:(\d+)\}/g)].map((x) => +x[1]);
+      if (c.effect.kind === 'money' || c.effect.kind === 'eachPlayer') expect(money, c.id).toEqual([Math.abs(c.effect.amount)]);
+      if (c.effect.kind === 'repairs') expect(money, c.id).toEqual([c.effect.house, c.effect.hotel]);
+    }
   });
   it('tema kustom rusak ditolak', () => {
     expect(validateTheme({ id: 'X X' }).length).toBeGreaterThan(0);

@@ -159,16 +159,20 @@ export function Landing({ theme, auth, invitedCode, onLogin, onGuest }: { theme:
             </button>
           ) : (
             <>
-              <button className="btn primary lg" onClick={onLogin}>
-                <Mail size={18} /> {t('Masuk dengan email')}
-              </button>
+              {/* login utama: Google. Email hanya jadi cadangan kalau server belum diisi GOOGLE_CLIENT_ID. */}
+              {auth.config.googleClientId ? (
+                <GoogleButton clientId={auth.config.googleClientId} onCredential={(c) => auth.google(c)} />
+              ) : (
+                <button className="btn primary lg" onClick={onLogin}>
+                  <Mail size={18} /> {t('Masuk dengan email')}
+                </button>
+              )}
               <button className="btn lg" onClick={onGuest}>
                 <Gamepad2 size={18} /> {t('Main sebagai tamu')}
               </button>
             </>
           )}
         </div>
-        {auth.config.googleClientId && <GoogleButton clientId={auth.config.googleClientId} onCredential={(c) => auth.google(c)} />}
         <div className="muted small">
           {OFFLINE
             ? t('Versi demo: main lokal lawan bot atau teman di satu perangkat. Main online, akun & teman tersedia saat game dijalankan dengan servernya.')
@@ -217,27 +221,52 @@ export function Landing({ theme, auth, invitedCode, onLogin, onGuest }: { theme:
 // ======================= masuk / daftar =======================
 
 /** Tombol resmi "Sign in with Google". onCredential menerima token ID dari Google. */
+/** Logo "G" resmi Google (wajib dipakai di tombol Sign in with Google). */
+function GoogleG({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
+/**
+ * Tombol Google bergaya Monopoli. Tampilan kita sendiri; di atasnya ada tombol resmi Google
+ * (iframe, nyaris transparan) yang menerima klik — jadi alur login tetap 100% milik Google.
+ */
 export function GoogleButton({ clientId, onCredential, onDone, text = 'continue_with' }: { clientId: string; onCredential: (credential: string) => Promise<unknown>; onDone?: () => void; text?: 'continue_with' | 'signin_with' }) {
+  const box = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
   const cb = useRef({ onCredential, onDone });
   cb.current = { onCredential, onDone };
   const lang = useLang();
   useEffect(() => {
     let alive = true;
+    setReady(false);
     loadGoogle().then(
       (g) => {
         if (!alive || !ref.current) return;
         g.accounts.id.initialize({
           client_id: clientId,
-          callback: (r: { credential: string }) =>
+          callback: (r: { credential: string }) => {
+            setBusy(true);
+            setErr(null);
             cb.current.onCredential(r.credential).then(
-              () => cb.current.onDone?.(),
-              (e: unknown) => setErr(errMsg(e)),
-            ),
+              () => (setBusy(false), cb.current.onDone?.()),
+              (e: unknown) => (setBusy(false), setErr(errMsg(e))),
+            );
+          },
         });
         ref.current.innerHTML = '';
-        g.accounts.id.renderButton(ref.current, { theme: 'filled_black', size: 'large', shape: 'pill', text, locale: lang, width: 280 });
+        const w = Math.round(Math.min(400, Math.max(220, box.current?.offsetWidth ?? 300)));
+        g.accounts.id.renderButton(ref.current, { type: 'standard', theme: 'outline', size: 'large', shape: 'pill', text, locale: lang, width: w });
+        setReady(true);
       },
       (e: unknown) => alive && setErr(errMsg(e)),
     );
@@ -247,8 +276,18 @@ export function GoogleButton({ clientId, onCredential, onDone, text = 'continue_
   }, [clientId, lang, text]);
   return (
     <div className="google-btn">
-      <div ref={ref} />
-      {err && <div className="muted small">{err}</div>}
+      <div ref={box} className={'g-btn' + (ready ? '' : ' loading') + (busy ? ' busy' : '')}>
+        <span className="g-logo">
+          <GoogleG />
+        </span>
+        <span className="g-label">{busy ? t('Menghubungkan…') : text === 'signin_with' ? t('Tautkan akun Google') : t('Lanjutkan dengan Google')}</span>
+        <div ref={ref} className="g-overlay" />
+      </div>
+      {err && (
+        <div className="notice danger small" role="alert">
+          {err}
+        </div>
+      )}
     </div>
   );
 }
@@ -586,12 +625,17 @@ export function UserChip({
   if (!auth.user)
     return (
       <div className="user-chip">
-        <span className="chip">{t('Tamu')}</span>
-        <button className="btn sm primary" onClick={onLogin}>
-          <LogIn size={14} /> {t('Masuk')}
-        </button>
-        <button className="icon-btn" title={t('Beranda')} onClick={onHome} aria-label={t('Beranda')}>
-          <ArrowLeft size={16} />
+        <div className="guest-pill">
+          <span className="guest-ava" aria-hidden>
+            <User size={15} />
+          </span>
+          <span className="guest-name">{t('Tamu')}</span>
+          <button className="signin-btn" onClick={onLogin}>
+            <LogIn size={15} /> {t('Masuk')}
+          </button>
+        </div>
+        <button className="icon-btn glass-btn" title={t('Beranda')} onClick={onHome} aria-label={t('Beranda')}>
+          <ArrowLeft size={17} />
         </button>
       </div>
     );

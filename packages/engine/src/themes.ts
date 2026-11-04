@@ -2,6 +2,7 @@
 // Tambah tema baru cukup tambah objek di THEMES (atau impor JSON lewat editor di UI).
 
 import { BOARD } from './board';
+import { customDecksErrors, type CustomDecks } from './cards';
 
 export interface Theme {
   id: string;
@@ -37,8 +38,25 @@ export interface Theme {
     fog: string;
     lightColor: string;
   };
-  /** opsional: ganti teks kartu per id */
+  /** opsional: ganti teks kartu bawaan per id (c1..c16, d1..d16) */
   cards?: Record<string, string>;
+  /**
+   * opsional: tumpukan kartu kustom sepenuhnya — teks + efek buatan sendiri, mengganti kartu bawaan.
+   * Efek: advance{to}, nearest{target}, money{amount}, back{steps}, jail, jailFree, repairs{house,hotel}, eachPlayer{amount}.
+   */
+  decks?: CustomDecks;
+  /**
+   * opsional: efek/animasi saat bidak mendarat di petak (kunci = nomor petak 0..39).
+   * anim = id animasi bawaan (mis. 'fireworks', 'ship', 'snow'); emoji & caption bebas.
+   */
+  tileFx?: Record<string, TileFx>;
+}
+
+export interface TileFx {
+  anim?: string;
+  emoji?: string;
+  caption?: string;
+  color?: string;
 }
 
 /** Ikon tengah papan yang bisa dipilih (tema bawaan & kustom). */
@@ -87,10 +105,10 @@ export const THEMES: Theme[] = [
     name: 'Amerika',
     flag: '🇺🇸',
     description: 'Klasik Atlantic City sampai gedung pencakar langit New York.',
-    // 1 satuan = $1.000 → modal $1.5M, New York $400K
-    currency: { symbol: '$', multiplier: 1_000, locale: 'en-US', compact: true },
-    corners: { go: 'GO', jail: 'Jail', parking: 'Free Parking', gotojail: 'Go To Jail' },
-    deckNames: { chance: 'Chance', community: 'Community Chest' },
+    // nilai setara Rupiah (kurs pajak Kemenkeu 28 Okt–3 Nov 2026: $1 = Rp18.032) → 1 satuan (Rp1 jt) ≈ $55,5
+    currency: { symbol: '$', multiplier: 55.5, locale: 'en-US', compact: true },
+    corners: { go: 'MULAI', jail: 'Penjara', parking: 'Parkir Gratis', gotojail: 'Masuk Penjara!' },
+    deckNames: { chance: 'Kesempatan', community: 'Dana Umum' },
     properties: [
       'Detroit', 'Cleveland',
       'Phoenix', 'Denver', 'Salt Lake City',
@@ -102,8 +120,8 @@ export const THEMES: Theme[] = [
       'San Francisco', 'New York',
     ],
     stations: ['Reading Railroad', 'Pennsylvania Railroad', 'B&O Railroad', 'Short Line'],
-    utilities: ['Electric Company', 'Water Works'],
-    taxes: ['Income Tax', 'Luxury Tax'],
+    utilities: ['Perusahaan Listrik', 'Perusahaan Air'],
+    taxes: ['Pajak Penghasilan', 'Pajak Barang Mewah'],
     groupColors: ['#8b5a2b', '#9fd8f5', '#d63c94', '#f7941d', '#ed1b24', '#fef200', '#1fb25a', '#0072bb'],
     tokens: ['Mobil Klasik', 'Topi', 'Anjing', 'Kapal', 'Sepatu Bot', 'Sepeda'],
     visual: {
@@ -123,9 +141,9 @@ export const THEMES: Theme[] = [
     name: 'Rusia',
     flag: '🇷🇺',
     description: 'Dari Vladivostok ke Lapangan Merah, ditemani kubah bawang.',
-    // 1 satuan = 100 ribu rubel → modal 150 jt ₽, Lapangan Merah 40 jt ₽
-    currency: { symbol: '₽', multiplier: 100_000, locale: 'ru-RU', compact: true, symbolAfter: true },
-    corners: { go: 'СТАРТ', jail: 'Tahanan Siberia', parking: 'Rehat Teh Samovar', gotojail: 'Ke Siberia!' },
+    // nilai setara Rupiah (kurs pasar ±Rp216 per rubel) → 1 satuan (Rp1 jt) ≈ 4.630 ₽
+    currency: { symbol: '₽', multiplier: 4_630, locale: 'en-US', compact: true, symbolAfter: true },
+    corners: { go: 'MULAI', jail: 'Tahanan Siberia', parking: 'Rehat Teh Samovar', gotojail: 'Ke Siberia!' },
     deckNames: { chance: 'Nasib', community: 'Kas Rakyat' },
     properties: [
       'Murmansk', 'Arkhangelsk',
@@ -159,9 +177,9 @@ export const THEMES: Theme[] = [
     name: 'Jepang',
     flag: '🇯🇵',
     description: 'Sakura, kuil, dan lampu neon Tokyo.',
-    // 1 satuan = ¥100.000 → modal ¥1,5 oku (億), Shibuya ¥4000万
-    currency: { symbol: '¥', multiplier: 100_000, locale: 'ja-JP', compact: true },
-    corners: { go: 'スタート', jail: 'Penjara', parking: 'Onsen Gratis', gotojail: 'Ke Penjara!' },
+    // nilai setara Rupiah (kurs pajak Kemenkeu 28 Okt–3 Nov 2026: ¥100 = Rp11.435) → 1 satuan (Rp1 jt) ≈ ¥8.750
+    currency: { symbol: '¥', multiplier: 8_750, locale: 'en-US', compact: true },
+    corners: { go: 'MULAI', jail: 'Penjara', parking: 'Onsen Gratis', gotojail: 'Ke Penjara!' },
     deckNames: { chance: 'Omikuji', community: 'Kas Desa' },
     properties: [
       'Naha', 'Kagoshima',
@@ -196,7 +214,7 @@ export const THEMES: Theme[] = [
     flag: '🥷',
     description: 'Dunia ninja orisinal: dari dusun kaki gunung sampai Benteng Bulan Perak.',
     // 1 satuan = 1.000 ryō → modal 1,5 jt 両
-    currency: { symbol: '両', multiplier: 1_000, locale: 'id-ID', compact: true, symbolAfter: true },
+    currency: { symbol: '両', multiplier: 1_000, locale: 'en-US', compact: true, symbolAfter: true },
     corners: { go: 'Gerbang Fajar', jail: 'Sel Bambu', parking: 'Kedai Teh Sakura', gotojail: 'Tertangkap Penjaga!' },
     deckNames: { chance: 'Gulungan Misi', community: 'Kas Klan' },
     properties: [
@@ -231,10 +249,10 @@ export const THEMES: Theme[] = [
     name: 'Inggris',
     flag: '🇬🇧',
     description: 'Versi London klasik: Old Kent Road sampai Mayfair.',
-    // 1 satuan = £1.000 → modal £1.5m, Mayfair £400k
-    currency: { symbol: '£', multiplier: 1_000, locale: 'en-GB', compact: true },
-    corners: { go: 'GO', jail: 'Jail', parking: 'Free Parking', gotojail: 'Go To Jail' },
-    deckNames: { chance: 'Chance', community: 'Community Chest' },
+    // nilai setara Rupiah (kurs pajak Kemenkeu 28 Okt–3 Nov 2026: £1 = Rp24.110) → 1 satuan (Rp1 jt) ≈ £41,5
+    currency: { symbol: '£', multiplier: 41.5, locale: 'en-US', compact: true },
+    corners: { go: 'MULAI', jail: 'Penjara', parking: 'Parkir Gratis', gotojail: 'Masuk Penjara!' },
+    deckNames: { chance: 'Kesempatan', community: 'Dana Umum' },
     properties: [
       'Old Kent Road', 'Whitechapel',
       'The Angel Islington', 'Euston Road', 'Pentonville Road',
@@ -246,8 +264,8 @@ export const THEMES: Theme[] = [
       'Park Lane', 'Mayfair',
     ],
     stations: ["King's Cross", 'Marylebone', 'Fenchurch St', 'Liverpool St'],
-    utilities: ['Electric Company', 'Water Works'],
-    taxes: ['Income Tax', 'Super Tax'],
+    utilities: ['Perusahaan Listrik', 'Perusahaan Air'],
+    taxes: ['Pajak Penghasilan', 'Pajak Super'],
     groupColors: ['#7b4b2a', '#a7dcf2', '#d0378f', '#f4902a', '#e3242b', '#ffe14d', '#16a34a', '#1d4ed8'],
     tokens: ['Bus Tingkat', 'Topi Bowler', 'Payung', 'Teko Teh', 'Corgi', 'Mahkota'],
     visual: {
@@ -299,16 +317,22 @@ export function tileName(theme: Theme, i: number): string {
 }
 
 const fmtCache = new Map<string, Intl.NumberFormat>();
-function compactFmt(locale: string) {
-  let f = fmtCache.get(locale);
+/** true kalau multiplier berbentuk 10^n (Rp1 jt, $1K): nilai bisa ditampilkan tepat. */
+const roundMult = (m: number) => Math.abs(Math.log10(m) - Math.round(Math.log10(m))) < 1e-9;
+
+function compactFmt(locale: string, approx = false) {
+  const key = `${locale}|${approx}`;
+  let f = fmtCache.get(key);
   if (!f) {
-    // 4 desimal cukup supaya nilai selalu tepat (satuan engine bilangan bulat), mis. Rp1,537 M / 153,7 млн ₽
+    // tepat: 4 desimal cukup (satuan engine bilangan bulat), mis. Rp1,537 M
+    // kurs (multiplier tidak bulat): 3 angka penting supaya rapi, mis. $83,2K bukan $83,2513K
+    const o: Intl.NumberFormatOptions = approx ? { notation: 'compact', maximumSignificantDigits: 3 } : { notation: 'compact', maximumFractionDigits: 4 };
     try {
-      f = new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 4 });
+      f = new Intl.NumberFormat(locale, o);
     } catch {
-      f = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 4 });
+      f = new Intl.NumberFormat('id-ID', o);
     }
-    fmtCache.set(locale, f);
+    fmtCache.set(key, f);
   }
   return f;
 }
@@ -317,7 +341,7 @@ export function formatMoney(theme: Theme, units: number): string {
   const c = theme.currency;
   if (c.compact) {
     const sign = units < 0 ? '−' : '';
-    const n = compactFmt(c.locale).format(Math.abs(units) * c.multiplier);
+    const n = compactFmt(c.locale, !roundMult(c.multiplier)).format(Math.abs(units) * c.multiplier);
     return c.symbolAfter ? `${sign}${n} ${c.symbol}` : `${sign}${c.symbol}${n}`;
   }
   let n: string;
@@ -336,16 +360,26 @@ export function formatMoney(theme: Theme, units: number): string {
 export function moneyUnit(theme: Theme): { before: string; after: string; step: number } {
   const c = theme.currency;
   if (!c.compact) return { before: c.symbol, after: (c.suffix ?? '').trim(), step: c.multiplier };
+  if (!roundMult(c.multiplier)) {
+    // multiplier hasil kurs (mis. $55,5): isian dalam ribuan (K) dengan langkah pecahan
+    const scale = 10 ** (3 * Math.max(1, Math.floor(Math.log10(c.multiplier * 100) / 3)));
+    const unit = compactFmt(c.locale).format(scale).replace(/\u00a0/g, ' ').replace(/^1\s*/, '');
+    const step = c.multiplier / scale;
+    return c.symbolAfter ? { before: '', after: `${unit} ${c.symbol}`.trim(), step } : { before: c.symbol, after: unit, step };
+  }
   const one = compactFmt(c.locale).format(c.multiplier).replace(/\u00a0/g, ' ');
   const m = /^1\s*([^\d].*)$/.exec(one);
   const unit = m ? m[1].trim() : `×${one}`;
   return c.symbolAfter ? { before: '', after: `${unit} ${c.symbol}`.trim(), step: 1 } : { before: c.symbol, after: unit, step: 1 };
 }
 
-/** Isi token {m:N} dan {t:i} di teks kartu. */
-export function cardText(theme: Theme, id: string, fallback: string): string {
+/** Isi token {m:N}, {m:go} (gaji START sesuai aturan main) dan {t:i} di teks kartu. */
+export function cardText(theme: Theme, id: string, fallback: string, goSalary = 200): string {
   const raw = theme.cards?.[id] ?? fallback;
-  return raw.replace(/\{m:(\d+)\}/g, (_, n) => formatMoney(theme, +n)).replace(/\{t:(\d+)\}/g, (_, i) => tileName(theme, +i));
+  return raw
+    .replace(/\{m:go\}/g, () => formatMoney(theme, goSalary))
+    .replace(/\{m:(\d+)\}/g, (_, n) => formatMoney(theme, +n))
+    .replace(/\{t:(\d+)\}/g, (_, i) => tileName(theme, +i));
 }
 
 /** Validasi tema kustom dari JSON (trust boundary: input user). Mengembalikan daftar error. */
@@ -371,5 +405,26 @@ export function validateTheme(x: unknown): string[] {
   if (!t.deckNames || !str(t.deckNames.chance) || !str(t.deckNames.community)) e.push('deckNames wajib');
   if (!t.visual || !['modern', 'classic', 'onion', 'pagoda', 'ninja', 'tropical'].includes(t.visual.buildings as string)) e.push('visual.buildings tidak valid');
   if (t.visual?.landmark !== undefined && !(LANDMARKS as readonly string[]).includes(t.visual.landmark)) e.push('visual.landmark tidak valid');
+  if (t.cards !== undefined && (typeof t.cards !== 'object' || !t.cards || Object.entries(t.cards).some(([k, v]) => !/^[cd]\d{1,2}$/.test(k) || typeof v !== 'string' || v.length > 200)))
+    e.push('cards: kunci c1..c16/d1..d16, isi teks maks 200 huruf');
+  e.push(...customDecksErrors(t.decks));
+  if (t.tileFx !== undefined) {
+    if (!t.tileFx || typeof t.tileFx !== 'object') e.push('tileFx harus objek { "nomorPetak": {...} }');
+    else
+      for (const [k, f] of Object.entries(t.tileFx)) {
+        const n = Number(k);
+        if (!Number.isInteger(n) || n < 0 || n > 39) e.push(`tileFx["${k}"]: kunci harus nomor petak 0..39`);
+        if (!f || typeof f !== 'object') {
+          e.push(`tileFx["${k}"] harus objek`);
+          continue;
+        }
+        if (f.anim !== undefined && (typeof f.anim !== 'string' || !/^[a-z]{2,20}$/.test(f.anim))) e.push(`tileFx["${k}"].anim tidak valid`);
+        if (f.emoji !== undefined && (typeof f.emoji !== 'string' || !f.emoji || f.emoji.length > 16)) e.push(`tileFx["${k}"].emoji maks 16 karakter`);
+        if (f.caption !== undefined && (typeof f.caption !== 'string' || f.caption.length > 80)) e.push(`tileFx["${k}"].caption maks 80 huruf`);
+        if (f.color !== undefined && !/^#[0-9a-f]{6}$/i.test(String(f.color))) e.push(`tileFx["${k}"].color harus #rrggbb`);
+        if (f.anim === undefined && f.emoji === undefined) e.push(`tileFx["${k}"] butuh anim atau emoji`);
+      }
+  }
+  if (JSON.stringify(t).length > 100_000) e.push('tema terlalu besar (maks 100 KB)');
   return e;
 }

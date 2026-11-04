@@ -9,7 +9,7 @@ import { BOARD, formatMoney, tileName, type GameState, type Theme } from '@monop
 import { getCityInfo, type CityInfo } from '../cityLandmarks';
 import { TOP } from './Fx';
 import { tilePos, tileRotY } from './layout';
-import { tj, tr } from '../i18n';
+import { tj, tName, tr } from '../i18n';
 
 interface Landmark3DProps {
   info: CityInfo;
@@ -370,7 +370,7 @@ export function CityBeacon({ tile, theme, state, onTileClick }: CityBeaconProps)
           <div className="city-3d-badge">
             <span className="city-3d-icon">{cityInfo.icon}</span>
             <div className="city-3d-text">
-              <span className="city-3d-title">{name}</span>
+              <span className="city-3d-title">{tName(name)}</span>
               <span className="city-3d-landmark">{tr(cityInfo.landmark)}</span>
             </div>
           </div>

@@ -1593,7 +1593,7 @@ export function TileAnim({ tile, theme, t0, anim }: { tile: number; theme: Theme
       </group>
       <Html position={[0, 2.9, 0]} center zIndexRange={[19, 0]} pointerEvents="none">
         <div className="anim-cap">
-          <span aria-hidden>{info.emoji}</span> {tr(info.caption)}
+          <span aria-hidden>{info.emoji}</span> {info.own ? info.caption : tr(info.caption)}
         </div>
       </Html>
     </group>

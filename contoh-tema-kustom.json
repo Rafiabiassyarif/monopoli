@@ -1,0 +1,215 @@
+{
+  "id": "contoh-kustom",
+  "name": "Indonesia Pesta",
+  "flag": "⭐",
+  "description": "Contoh tema JSON: kartu Kesempatan & Dana Umum buatan sendiri, plus efek khusus di beberapa petak.",
+  "currency": {
+    "symbol": "Rp",
+    "multiplier": 1000000,
+    "locale": "id-ID",
+    "compact": true
+  },
+  "corners": {
+    "go": "MULAI",
+    "jail": "Penjara Nusakambangan",
+    "parking": "Istirahat di Warung",
+    "gotojail": "Ditangkap!"
+  },
+  "deckNames": {
+    "chance": "Kejutan",
+    "community": "Kas Kampung"
+  },
+  "properties": [
+    "Merauke",
+    "Jayapura",
+    "Kupang",
+    "Mataram",
+    "Denpasar",
+    "Makassar",
+    "Manado",
+    "Balikpapan",
+    "Pontianak",
+    "Banjarmasin",
+    "Palembang",
+    "Padang",
+    "Pekanbaru",
+    "Medan",
+    "Semarang",
+    "Solo",
+    "Yogyakarta",
+    "Malang",
+    "Surabaya",
+    "Bandung",
+    "Ubud Bali",
+    "Jakarta"
+  ],
+  "stations": [
+    "Stasiun Gambir",
+    "Pelabuhan Tanjung Priok",
+    "Bandara Soekarno-Hatta",
+    "Stasiun MRT Bundaran HI"
+  ],
+  "utilities": [
+    "PLN",
+    "PDAM"
+  ],
+  "taxes": [
+    "Pajak Penghasilan",
+    "Pajak Barang Mewah"
+  ],
+  "groupColors": [
+    "#8d5a3b",
+    "#7fd3f7",
+    "#d94f9b",
+    "#f39c3d",
+    "#e53935",
+    "#f9d71c",
+    "#2eaa5c",
+    "#1e4fd8"
+  ],
+  "tokens": [
+    "Becak",
+    "Kapal Pinisi",
+    "Komodo",
+    "Bajaj",
+    "Wayang",
+    "Rumah Gadang"
+  ],
+  "visual": {
+    "sky": [
+      "#ff9a5a",
+      "#2b1e5a"
+    ],
+    "table": "#3b2416",
+    "board": "#f3ead2",
+    "boardCenter": "#c41e2a",
+    "accent": "#e53935",
+    "buildings": "tropical",
+    "landmark": "monas",
+    "fog": "#4a2a4a",
+    "lightColor": "#ffe2b8"
+  },
+  "decks": {
+    "chance": [
+      {
+        "text": "Menang lomba makan kerupuk! Terima {m:100}.",
+        "effect": {
+          "kind": "money",
+          "amount": 100
+        }
+      },
+      {
+        "text": "Mudik lebaran ke {t:39}. Lewat START dapat gaji.",
+        "effect": {
+          "kind": "advance",
+          "to": 39
+        }
+      },
+      {
+        "text": "Kena tilang di jalan tol. Bayar {m:30}.",
+        "effect": {
+          "kind": "money",
+          "amount": -30
+        }
+      },
+      {
+        "text": "Naik kereta ke stasiun terdekat. Kalau dimiliki, bayar sewa 2x lipat.",
+        "effect": {
+          "kind": "nearest",
+          "target": "station"
+        }
+      },
+      {
+        "text": "Lupa bawa dompet, putar balik 2 langkah.",
+        "effect": {
+          "kind": "back",
+          "steps": 2
+        }
+      },
+      {
+        "text": "Ketahuan main petasan. Masuk PENJARA!",
+        "effect": {
+          "kind": "jail"
+        }
+      },
+      {
+        "text": "Kartu sakti: BEBAS PENJARA. Simpan sampai dipakai.",
+        "effect": {
+          "kind": "jailFree"
+        }
+      },
+      {
+        "text": "Traktir teman sekampung: bayar {m:20} ke tiap pemain.",
+        "effect": {
+          "kind": "eachPlayer",
+          "amount": -20
+        }
+      }
+    ],
+    "community": [
+      {
+        "text": "Arisan RT cair! Terima {m:150}.",
+        "effect": {
+          "kind": "money",
+          "amount": 150
+        }
+      },
+      {
+        "text": "Hari ulang tahunmu! Terima {m:15} dari tiap pemain.",
+        "effect": {
+          "kind": "eachPlayer",
+          "amount": 15
+        }
+      },
+      {
+        "text": "Atap bocor musim hujan: bayar {m:30} per rumah, {m:100} per hotel.",
+        "effect": {
+          "kind": "repairs",
+          "house": 30,
+          "hotel": 100
+        }
+      },
+      {
+        "text": "Pulang kampung ke START. Terima gaji {m:go}.",
+        "effect": {
+          "kind": "advance",
+          "to": 0
+        }
+      },
+      {
+        "text": "Bayar iuran kebersihan {m:10}.",
+        "effect": {
+          "kind": "money",
+          "amount": -10
+        }
+      },
+      {
+        "text": "Kartu sakti: BEBAS PENJARA. Simpan sampai dipakai.",
+        "effect": {
+          "kind": "jailFree"
+        }
+      }
+    ]
+  },
+  "tileFx": {
+    "0": {
+      "anim": "money",
+      "emoji": "💰",
+      "caption": "Gajian! Saatnya belanja"
+    },
+    "20": {
+      "emoji": "☕",
+      "caption": "Ngopi santai dulu di warung"
+    },
+    "24": {
+      "anim": "fireworks",
+      "emoji": "🎆",
+      "caption": "Pesta kembang api tahun baru"
+    },
+    "39": {
+      "anim": "fireworks",
+      "emoji": "🎉",
+      "caption": "Malam takbiran di ibu kota"
+    }
+  }
+}

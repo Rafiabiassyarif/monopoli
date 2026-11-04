@@ -66,6 +66,12 @@ export function tj(s: string, vars: Record<string, ReactNode>): ReactNode {
   );
 }
 
+/** Terjemahan nama (petak, kota, kartu tema): pakai kamus bila ada, kalau tidak biarkan apa adanya tanpa peringatan. */
+export function tName(s: string): string {
+  if (lang === 'id' || !s) return s;
+  return EN[s] ?? s;
+}
+
 /** Terjemahkan pesan dari server/engine (teks Indonesia yang mungkin berisi nama/angka). */
 export function tr(msg: string): string {
   if (lang === 'id' || !msg) return msg;
