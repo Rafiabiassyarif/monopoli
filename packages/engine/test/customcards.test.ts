@@ -17,7 +17,7 @@ describe('kartu kustom', () => {
     const base = THEMES[0];
     expect(validateTheme({ ...base, id: 'x', decks: { chance: [{ text: 'Hadiah', effect: { kind: 'money', amount: 10 } }] }, tileFx: { '5': { anim: 'train', caption: 'Tut tut' } } })).toEqual([]);
     expect(validateTheme({ ...base, id: 'x', tileFx: { '77': { emoji: '🎉' } } }).join()).toMatch(/0\.\.39/);
-    expect(validateTheme({ ...base, id: 'x', tileFx: { '3': { caption: 'tanpa emoji/anim' } } }).join()).toMatch(/anim atau emoji/);
+    expect(validateTheme({ ...base, id: 'x', tileFx: { '3': { caption: 'tanpa emoji/anim' } } }).join()).toMatch(/butuh anim, emoji, atau custom/);
   });
 
   it('kartu kustom dipakai saat mendarat di Kesempatan', () => {
@@ -64,5 +64,16 @@ describe('kartu rahasia', () => {
     expect(cardVisible(s, { player: 'p1', card: 'c6' }, null)).toBe(true);
     expect(cardVisible(s, { player: 'p2', card: 'c6' }, null)).toBe(false);
     expect(cardVisible(s, { player: 'p1', card: 'c6' }, 'p0')).toBe(false);
+  });
+});
+
+describe('animasi petak buatan sendiri', () => {
+  it('custom valid lolos, nilai di luar batas ditolak', () => {
+    const base = THEMES[0];
+    const ok = { motion: 'confetti', emojis: '🎉🎊', count: 20, size: 1, speed: 1, glow: '#fbbf24', sound: 'win' };
+    expect(validateTheme({ ...base, id: 'x', tileFx: { '5': { custom: ok, caption: 'Pesta' } } })).toEqual([]);
+    expect(validateTheme({ ...base, id: 'x', tileFx: { '5': { custom: { ...ok, motion: 'teleport' } } } }).join()).toMatch(/custom.motion/);
+    expect(validateTheme({ ...base, id: 'x', tileFx: { '5': { custom: { ...ok, count: 99 } } } }).join()).toMatch(/custom.count/);
+    expect(validateTheme({ ...base, id: 'x', tileFx: { '5': { custom: { ...ok, sound: 'boom' } } } }).join()).toMatch(/custom.sound/);
   });
 });

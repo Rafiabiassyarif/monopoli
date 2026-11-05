@@ -136,7 +136,6 @@ export function RulesForm({ rules, theme, onChange }: { rules: Options; theme: T
         </div>
         <div className="toggles grid2">
           <Toggle on={rules.auctions} onChange={(v) => set('auctions', v)} label={t('Lelang properti')} hint={t('Resmi: nyala. Petak yang tidak dibeli dilelang ke semua pemain')} />
-          <Toggle on={rules.evenBuild} onChange={(v) => set('evenBuild', v)} label={t('Bangun merata')} hint={t('Resmi: nyala. Rumah dibangun & dijual merata dalam satu set')} />
           <Toggle on={rules.limitedBuildings} onChange={(v) => set('limitedBuildings', v)} label={t('Stok bangunan terbatas')} hint={t('Resmi: nyala. Bank hanya punya 32 rumah & 12 hotel')} />
           <Toggle on={rules.rentInJail} onChange={(v) => set('rentInJail', v)} label={t('Tetap tagih sewa di penjara')} hint={t('Resmi: nyala')} />
           <Toggle on={rules.doubleGo} onChange={(v) => set('doubleGo', v)} label={t('Gaji 2× tepat di START')} hint={t('Aturan rumah (resmi: mati)')} />

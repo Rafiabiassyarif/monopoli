@@ -118,7 +118,7 @@ export interface Options {
   rentInJail: boolean;
   /** properti yang tidak dibeli dilelang (resmi: ya). Mati = petak tetap milik bank */
   auctions: boolean;
-  /** rumah harus dibangun & dijual merata dalam satu set (resmi: ya) */
+  /** rumah harus dibangun & dijual merata dalam satu set (resmi: ya — selalu dipaksa nyala, lihat sanitizeOptions) */
   evenBuild: boolean;
   /** stok bank terbatas 32 rumah / 12 hotel (resmi: ya) */
   limitedBuildings: boolean;
@@ -172,6 +172,8 @@ export function sanitizeOptions(raw: unknown): Options {
   (Object.keys(OPTION_LIMITS) as (keyof typeof OPTION_LIMITS)[]).forEach(num);
   for (const k of ['doubleGo', 'rentInJail', 'auctions', 'evenBuild', 'limitedBuildings', 'freeParkingPot', 'shortGame'] as const) if (r[k] !== undefined) o[k] = !!r[k];
   if (r.incomeTax === 'classic' || r.incomeTax === 'flat') o.incomeTax = r.incomeTax;
+  // aturan bangun resmi selalu berlaku: set warna lengkap, beli satu per satu, merata, hotel setelah 4 rumah merata
+  o.evenBuild = true;
   return o;
 }
 

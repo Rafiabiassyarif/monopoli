@@ -1,7 +1,17 @@
 // Animasi khas tiap petak saat bidak mendarat (mis. Kupang = kuda Sandelwood berlari).
 // File ini hanya data & pemetaan (tanpa three.js); bentuk 3D-nya ada di scene/TileAnims.tsx.
 
-import { BOARD, tileName, type Theme } from '@monopoli/engine';
+import { BOARD, customAnimError, tileName, type CustomAnim, type Theme } from '@monopoli/engine';
+
+/** Pecah teks jadi emoji/huruf utuh (grapheme), mis. "🎉👨‍👩‍👧" → ["🎉", "👨‍👩‍👧"]. */
+export function graphemes(s: string): string[] {
+  try {
+    return [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(s)].map((x) => x.segment).filter((x) => x.trim());
+  } catch {
+    return [...s].filter((x) => x.trim());
+  }
+}
+const firstEmoji = (s: string) => graphemes(s)[0] ?? '✨';
 import { getRaw, setRaw } from './storage';
 
 /** Lama satu animasi (ms). */
@@ -60,6 +70,8 @@ export interface TileAnimInfo {
   color?: string;
   /** true = dari tileFx tema JSON pemain (keterangan ditampilkan apa adanya, tidak diterjemahkan) */
   own?: boolean;
+  /** animasi buatan sendiri (partikel emoji) — menggantikan animasi 3D bawaan */
+  custom?: CustomAnim;
 }
 
 /** Keterangan bawaan per animasi (dipakai kalau nama petak tidak punya keterangan khusus). */
@@ -347,6 +359,8 @@ export function tileAnimFor(theme: Theme, i: number): TileAnimInfo | null {
   if (own) {
     const id = own.anim && own.anim in BASE ? (own.anim as AnimId) : null;
     const base = id ? BASE[id] : null;
+    if (own.custom && !customAnimError(own.custom))
+      return { id: 'stars', emoji: own.emoji ?? firstEmoji(own.custom.emojis), caption: own.caption ?? '', color: own.color ?? own.custom.glow, own: true, custom: own.custom };
     if (id || own.emoji) return { id: id ?? 'stars', emoji: own.emoji ?? base![0], caption: own.caption ?? base?.[1] ?? '', color: own.color, own: true };
   }
   if (t.kind === 'chance' || t.kind === 'community') return null;

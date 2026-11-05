@@ -9,7 +9,11 @@ import { Flag, TokenBadge } from './ui';
 import { t, tr, useLang } from './i18n';
 import { cardFace, tileName } from './names';
 import { DICE_MS, fx } from './scene/busy';
-import { tileAnimFor, tileAnimOn, type TileAnimInfo } from './tileAnims';
+import { PLAY_ANIM_EVENT, tileAnimFor, tileAnimOn, type TileAnimInfo } from './tileAnims';
+import { CUSTOM_FX_MS, CustomFx } from './CustomFx';
+
+/** lama tampil animasi petak di papan 2D */
+const fxMs = (info: TileAnimInfo) => (info.custom ? CUSTOM_FX_MS / Math.max(0.5, info.custom.speed) + 900 : 2400);
 
 /** posisi grid 11×11 (baris, kolom) untuk petak i; START di pojok kanan bawah seperti papan asli */
 function cell(i: number): [number, number] {
@@ -63,6 +67,20 @@ function useBoardFx(state: GameState | null, theme: Theme, stepMs: number) {
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  // tombol "Putar animasi" di kartu akta → tampilkan juga di papan 2D
+  useEffect(() => {
+    const on = (ev: Event) => {
+      const tile = (ev as CustomEvent<number>).detail;
+      const info = tileAnimFor(themeRef.current, tile);
+      if (!info) return;
+      const f: TileFx = { key: performance.now(), tile, info };
+      setTileFx(f);
+      timers.current.push(window.setTimeout(() => setTileFx((x) => (x?.key === f.key ? null : x)), fxMs(info)));
+    };
+    addEventListener(PLAY_ANIM_EVENT, on);
+    return () => removeEventListener(PLAY_ANIM_EVENT, on);
+  }, []);
+
   useEffect(() => {
     if (!state) return;
     const at = (ms: number, f: () => void) => timers.current.push(window.setTimeout(f, Math.max(0, ms)));
@@ -115,7 +133,7 @@ function useBoardFx(state: GameState | null, theme: Theme, stepMs: number) {
           if (info) {
             const f: TileFx = { key: e.seq, tile: e.to, info };
             at(tl - 60, () => setTileFx(f));
-            at(tl - 60 + 2400, () => setTileFx((x) => (x?.key === f.key ? null : x)));
+            at(tl - 60 + fxMs(info), () => setTileFx((x) => (x?.key === f.key ? null : x)));
           }
         }
       } else if (e.type === 'card') {
@@ -251,9 +269,15 @@ export function Board2D({
                 </span>
               )}
               {tileFx?.tile === i && (
-                <span key={tileFx.key} className="b2-anim" aria-hidden>
-                  {tileFx.info.emoji}
-                </span>
+                tileFx.info.custom ? (
+                  <span key={tileFx.key} className="b2-anim custom" aria-hidden>
+                    <CustomFx anim={tileFx.info.custom} px={110} runKey={tileFx.key} sound />
+                  </span>
+                ) : (
+                  <span key={tileFx.key} className="b2-anim" aria-hidden>
+                    {tileFx.info.emoji}
+                  </span>
+                )
               )}
               {floats
                 .filter((f) => f.tile === i)
@@ -306,7 +330,7 @@ export function Board2D({
               </div>
             ) : cur && !cur.bankrupt ? (
               <div className="b2-turn">
-                <TokenBadge token={cur.token} color={cur.color} size={16} /> {t('Giliran {name}', { name: cur.name })}
+                <TokenBadge token={cur.token} color={cur.color} size={16} /> {(me ? cur.id === me : !cur.bot && (state?.players ?? []).filter((x) => !x.bot).length === 1) ? t('Giliranmu') : t('Giliran {name}', { name: cur.name })}
               </div>
             ) : null}
           </div>

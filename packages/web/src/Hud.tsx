@@ -164,7 +164,7 @@ export function Hud(props: Props) {
       if (e.type === 'turn') {
         const p = state.players.find((x) => x.id === e.player)!;
         if (me ? e.player === me : !p.bot && !spectator) sfx('turn');
-        setBanner({ key: e.seq, text: me && e.player === me ? t('Giliranmu!') : t('Giliran {name}', { name: p.name }), color: p.color });
+        setBanner({ key: e.seq, text: (me ? e.player === me : !p.bot && !spectator && state.players.filter((x) => !x.bot).length === 1) ? t('Giliranmu!') : t('Giliran {name}', { name: p.name }), color: p.color });
       }
     }
     if (add.length) {
@@ -1000,7 +1000,7 @@ function AssetsDialog({
   if (ut.some((i) => state.tiles[i].owner === viewer)) groups.push({ key: 'ut', color: '#64748b', label: t('Utilitas'), tiles: ut, full: false });
 
   return (
-    <Modal title={t('Aset {name}', { name: p.name })} icon={<Wallet size={20} />} onClose={onClose} wide>
+    <Modal title={!spectator && viewer === initialViewer ? t('Asetku') : t('Aset {name}', { name: p.name })} icon={<Wallet size={20} />} onClose={onClose} wide>
       {spectator && (
         <div className="people">
           {state.players.map((x) => (
@@ -1412,7 +1412,11 @@ export function HelpDialog({ theme, onClose, rules = DEFAULT_OPTIONS, onPractice
       t('Keluar dengan bayar {bail} sebelum lempar, kartu bebas penjara, atau lempar double. Gagal 3 kali: wajib bayar {bail} lalu jalan sesuai dadu. Di penjara tetap bisa menagih sewa, membangun & tukar.', { bail: m(BAIL) }),
     ],
     [<ArrowRightLeft size={16} />, t('Tukar'), t('Tawarkan properti, uang, dan/atau kartu bebas penjara — juga di antara giliran. Penerima bisa menerima, menolak, atau mengajukan tawaran balik. Properti tergadai yang diterima kena bunga 10%.')],
-    [<Building size={16} />, t('Membangun'), t('Bangun, jual bangunan, dan gadai boleh di giliranmu maupun di antara giliran. Kalau stok rumah/hotel bank kurang untuk semua yang ingin membangun, sisa bangunan dilelang.')],
+    [
+      <Building size={16} />,
+      t('Membangun'),
+      t('Punya semua properti satu warna (mis. semua merah)? Kamu boleh membeli rumah kapan saja saat giliranmu — tidak harus mendarat di properti itu. Rumah dibeli satu per satu dan harus merata di semua properti satu warna. Setelah tiap properti punya 4 rumah, rumah bisa diganti hotel. Kalau stok rumah/hotel bank kurang untuk semua yang ingin membangun, sisa bangunan dilelang.'),
+    ],
     [<MessageCircle size={16} />, t('Shortcut'), t('Spasi = lempar / selesai · B = beli · L = lelang · Esc = tutup. Klik petak papan untuk melihat akta.')],
   ];
   return (

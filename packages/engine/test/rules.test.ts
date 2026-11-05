@@ -20,6 +20,7 @@ import {
   safeAction,
   type GameState,
   type NewPlayer,
+  buildBlock,
 } from '../src';
 
 const P = (n: number, bot = false): NewPlayer[] =>
@@ -334,13 +335,28 @@ describe('pengaturan aturan main', () => {
     const n = rollUntil(s, 'p0', (x) => x.players[0].pos === 3);
     expect(n.events.some((e) => e.type === 'pay' && e.reason === 'rent')).toBe(false);
   });
-  it('bangun tidak merata & stok tak terbatas', () => {
+  it('bangun merata selalu wajib (opsi lama evenBuild: false diabaikan) & stok tak terbatas', () => {
     const s = createGame(P(2), 1, { evenBuild: false, limitedBuildings: false });
+    expect(s.options.evenBuild).toBe(true);
     own(s, 'p0', [1, 3]);
-    s.tiles[1].houses = 3;
-    expect(canBuild(s, 'p0', 1)).toBe(true); // resmi: harus bangun di 3 dulu
+    s.tiles[1].houses = 1;
+    expect(canBuild(s, 'p0', 1)).toBe(false); // harus bangun di 3 dulu
+    expect(canBuild(s, 'p0', 3)).toBe(true);
     s.tiles.forEach((t, i) => i > 5 && (t.houses = 4));
-    expect(canBuild(s, 'p0', 3)).toBe(true); // stok resmi sudah habis
+    expect(canBuild(s, 'p0', 3)).toBe(true); // stok resmi sudah habis, tapi stok tak terbatas
+  });
+  it('aturan bangun resmi: set lengkap, satu per satu, merata, hotel setelah 4 rumah di semua petak set', () => {
+    const s = createGame(P(2), 1);
+    own(s, 'p0', [21, 23]); // merah belum lengkap (24 milik bank)
+    expect(buildBlock(s, 'p0', 21)).toBe('Harus punya satu set warna lengkap');
+    own(s, 'p0', [24]);
+    expect(canBuild(s, 'p0', 21)).toBe(true); // tidak perlu mendarat di sana
+    s.tiles[21].houses = 4;
+    s.tiles[23].houses = 4;
+    s.tiles[24].houses = 3;
+    expect(buildBlock(s, 'p0', 21)).toBe('Bangun merata dulu di petak lain'); // 24 belum 4 rumah
+    s.tiles[24].houses = 4;
+    expect(canBuild(s, 'p0', 21)).toBe(true); // semua 4 rumah → boleh hotel
   });
   it('pajak penghasilan klasik: 10% kekayaan atau 200, mana yang lebih kecil', () => {
     const s = createGame(P(2), 1, { incomeTax: 'classic' });

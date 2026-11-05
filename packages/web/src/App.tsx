@@ -37,7 +37,7 @@ import { armMusic, setMusicMood } from './music';
 import { Board2D } from './Board2D';
 import { publicUrl } from './platform';
 import { ThemeCards } from './ThemeCards';
-import { sampleTheme } from './themeSample';
+import { ThemeCheck, ThemeSpec } from './ThemeSpec';
 import { setTipsOn } from './tips';
 import { markSceneCrashed, setBoard2d, useBoard2d } from './boardMode';
 import { getRaw as getStore, setRaw as setStore } from './storage';
@@ -172,9 +172,31 @@ export function App() {
     if (screen !== 'game') return setDockH(0);
     const el = document.querySelector('.dock');
     if (!el) return;
-    const ro = new ResizeObserver(() => setDockH(Math.round(el.getBoundingClientRect().height) + 12));
+    const ro = new ResizeObserver(() => {
+      const r = el.getBoundingClientRect();
+      // HP mendatar: dock pindah ke samping kanan → tidak menutupi bagian bawah papan
+      setDockH(r.left > window.innerWidth * 0.3 ? 0 : Math.round(r.height) + 12);
+    });
     ro.observe(el);
     return () => ro.disconnect();
+  }, [screen, !!state]);
+  // HP/tablet tegak: daftar pemain jadi strip di atas → papan digeser ke bawah sebesar strip itu
+  const [topH, setTopH] = useState(0);
+  useEffect(() => {
+    if (screen !== 'game') return setTopH(0);
+    const el = document.querySelector('.players');
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setTopH(r.width > window.innerWidth * 0.6 ? Math.max(0, Math.round(r.bottom) - 64) : 0);
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
   }, [screen, !!state]);
 
   trackBusy(screen === 'game' ? state : null, 220 / speed);
@@ -223,7 +245,7 @@ export function App() {
   const allThemes = [...custom, ...THEMES];
 
   return (
-    <div className="app" style={{ ['--dock-h' as string]: `${dockH || 200}px` }}>
+    <div className="app" style={{ ['--dock-h' as string]: `${dockH || 200}px`, ['--top-h' as string]: `${topH}px` }}>
       <div className="scene">
         {flat ? (
           screen === 'game' ? (
@@ -245,6 +267,7 @@ export function App() {
             stepMs={220 / speed}
             camMode={screen === 'game' ? camMode : 'free'}
             bottomInset={dockH}
+            topInset={topH}
             idle={screen !== 'game'}
             onLowFps={() => !lowFpsSeen() && setLowFps(true)}
             me={mode === 'online' ? online.me : null}
@@ -1165,10 +1188,8 @@ function ThemeStudio({ custom, onSave, onUse, onBack, onError }: { custom: Theme
             }}
           />
         </label>
-        <button className="btn" onClick={() => download(sampleTheme())} title={t('Contoh tema lengkap dengan kartu & efek buatan sendiri')}>
-          <Download size={16} /> {t('Unduh contoh JSON')}
-        </button>
         </div>
+        <ThemeSpec />
         {custom.length > 0 && (
           <>
             <span className="eyebrow">{t('Tema kustom kamu')}</span>
@@ -1215,6 +1236,8 @@ function ThemeStudio({ custom, onSave, onUse, onBack, onError }: { custom: Theme
           { v: 'json', label: 'JSON' },
         ]}
       />
+
+      <ThemeCheck draft={draft} />
 
       {tab === 'info' && (
         <div className="form grid2">

@@ -57,6 +57,44 @@ export interface TileFx {
   emoji?: string;
   caption?: string;
   color?: string;
+  /** animasi buatan sendiri (menggantikan anim bawaan): emoji bergerak dengan pola pilihan */
+  custom?: CustomAnim;
+}
+
+/** Pola gerak animasi buatan sendiri. */
+export const CUSTOM_MOTIONS = ['burst', 'rain', 'float', 'fountain', 'confetti', 'spin', 'orbit', 'bounce', 'zoom', 'wave'] as const;
+export type CustomMotion = (typeof CUSTOM_MOTIONS)[number];
+/** Suara yang boleh dipakai animasi buatan sendiri (efek suara sintetis bawaan game). */
+export const CUSTOM_SOUNDS = ['none', 'buy', 'pay', 'win', 'jail', 'card'] as const;
+export type CustomSound = (typeof CUSTOM_SOUNDS)[number];
+
+export interface CustomAnim {
+  motion: CustomMotion;
+  /** 1–4 emoji, dipakai bergantian untuk tiap partikel */
+  emojis: string;
+  /** jumlah partikel 1..30 */
+  count: number;
+  /** ukuran 0.5..2.5 (1 = normal) */
+  size: number;
+  /** kecepatan 0.5..2 (1 = normal, 2 = dua kali lebih cepat) */
+  speed: number;
+  /** warna cahaya/latar opsional #rrggbb */
+  glow?: string;
+  sound?: CustomSound;
+}
+
+/** Cek animasi buatan sendiri. null = valid. */
+export function customAnimError(c: unknown): string | null {
+  const x = c as Partial<CustomAnim> | null;
+  if (!x || typeof x !== 'object') return 'custom harus objek';
+  if (!(CUSTOM_MOTIONS as readonly string[]).includes(String(x.motion))) return `custom.motion harus salah satu: ${CUSTOM_MOTIONS.join(', ')}`;
+  if (typeof x.emojis !== 'string' || !x.emojis.trim() || x.emojis.length > 24) return 'custom.emojis wajib (1–4 emoji, maks 24 karakter)';
+  if (typeof x.count !== 'number' || !Number.isInteger(x.count) || x.count < 1 || x.count > 30) return 'custom.count harus 1..30';
+  if (typeof x.size !== 'number' || !(x.size >= 0.5 && x.size <= 2.5)) return 'custom.size harus 0.5..2.5';
+  if (typeof x.speed !== 'number' || !(x.speed >= 0.5 && x.speed <= 2)) return 'custom.speed harus 0.5..2';
+  if (x.glow !== undefined && !/^#[0-9a-f]{6}$/i.test(String(x.glow))) return 'custom.glow harus #rrggbb';
+  if (x.sound !== undefined && !(CUSTOM_SOUNDS as readonly string[]).includes(String(x.sound))) return `custom.sound harus salah satu: ${CUSTOM_SOUNDS.join(', ')}`;
+  return null;
 }
 
 /** Ikon tengah papan yang bisa dipilih (tema bawaan & kustom). */
@@ -422,7 +460,11 @@ export function validateTheme(x: unknown): string[] {
         if (f.emoji !== undefined && (typeof f.emoji !== 'string' || !f.emoji || f.emoji.length > 16)) e.push(`tileFx["${k}"].emoji maks 16 karakter`);
         if (f.caption !== undefined && (typeof f.caption !== 'string' || f.caption.length > 80)) e.push(`tileFx["${k}"].caption maks 80 huruf`);
         if (f.color !== undefined && !/^#[0-9a-f]{6}$/i.test(String(f.color))) e.push(`tileFx["${k}"].color harus #rrggbb`);
-        if (f.anim === undefined && f.emoji === undefined) e.push(`tileFx["${k}"] butuh anim atau emoji`);
+        if (f.custom !== undefined) {
+          const ce = customAnimError(f.custom);
+          if (ce) e.push(`tileFx["${k}"]: ${ce}`);
+        }
+        if (f.anim === undefined && f.emoji === undefined && f.custom === undefined) e.push(`tileFx["${k}"] butuh anim, emoji, atau custom`);
       }
   }
   if (JSON.stringify(t).length > 100_000) e.push('tema terlalu besar (maks 100 KB)');

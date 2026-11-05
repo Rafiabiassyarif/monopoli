@@ -410,16 +410,37 @@ function SceneFx({ state, theme, stepMs, me }: { state: GameState; theme: Theme;
 export type CamMode = 'free' | 'follow' | 'top';
 
 /** Geser pusat render ke atas sebesar setengah tinggi dock HUD, supaya papan tidak tertutup panel bawah. */
-function ViewOffset({ bottom }: { bottom: number }) {
-  const { camera, size } = useThree();
+function ViewOffset({ bottom, top = 0 }: { bottom: number; top?: number }) {
+  const { camera, size, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera; size: { width: number; height: number }; controls: { target: THREE.Vector3; update: () => void } | null };
+  const wasPortrait = useRef<boolean | null>(null);
   useEffect(() => {
-    const cam = camera as THREE.PerspectiveCamera;
-    if (bottom > 0) cam.setViewOffset(size.width, size.height, 0, bottom / 2, size.width, size.height);
+    const cam = camera;
+    const aspect = size.width / Math.max(1, size.height);
+    const portrait = aspect < 0.9;
+    // layar potret (HP/tablet tegak): kamera lebih dari atas supaya papan tidak "mengecil" ke belakang
+    if (wasPortrait.current !== portrait) {
+      if (wasPortrait.current !== null || portrait) {
+        cam.position.set(0, portrait ? 24 : 21, portrait ? 8 : 12.5);
+        controls?.update();
+      }
+      wasPortrait.current = portrait;
+    }
+    const shift = (bottom - top) / 2;
+    if (shift !== 0) cam.setViewOffset(size.width, size.height, 0, shift, size.width, size.height);
     else cam.clearViewOffset();
-    // layar potret (HP): perkecil zoom supaya seluruh lebar papan terlihat
-    cam.zoom = Math.max(0.45, Math.min(1, (size.width / size.height) * 1.2));
+    // layar sempit: zoom pas supaya seluruh lebar papan (12 unit + sedikit tepi) terlihat
+    if (aspect < 1.15) {
+      const target = controls?.target ?? new THREE.Vector3(0, 0, 1.2);
+      const d = cam.position.distanceTo(target);
+      const tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+      const visW = 2 * d * tanH * aspect;
+      // tinggi layar yang benar-benar kosong (tanpa dock & strip pemain) juga dibatasi
+      const free = Math.max(0.3, (size.height - bottom - top - 70) / size.height);
+      const visH = 2 * d * tanH * free;
+      cam.zoom = Math.max(0.45, Math.min(1, visW / 13.2, visH / 12.5));
+    } else cam.zoom = 1;
     cam.updateProjectionMatrix();
-  }, [camera, size.width, size.height, bottom]);
+  }, [camera, controls, size.width, size.height, bottom, top]);
   return null;
 }
 
@@ -465,6 +486,8 @@ export interface SceneProps {
   camMode: CamMode;
   /** tinggi panel bawah (px) yang menutupi kanvas */
   bottomInset?: number;
+  /** tinggi strip pemain di atas (layar tegak) → papan digeser ke bawah */
+  topInset?: number;
   /** true = di balik menu (render hemat) */
   idle?: boolean;
   /** dipanggil sekali kalau 3D terus-menerus di bawah ±20 fps saat bermain */
@@ -503,7 +526,7 @@ function FpsWatch({ active, onLow }: { active: boolean; onLow?: () => void }) {
   return null;
 }
 
-export function GameScene({ state, theme, selected, hovered, onTile, onHover, rollKey, stepMs, camMode, bottomInset = 0, idle = false, onLowFps, me = null }: SceneProps) {
+export function GameScene({ state, theme, selected, hovered, onTile, onHover, rollKey, stepMs, camMode, bottomInset = 0, topInset = 0, idle = false, onLowFps, me = null }: SceneProps) {
   const [low] = useState(() => /Mobi|Android/i.test(navigator.userAgent) || (navigator.hardwareConcurrency ?? 8) <= 4);
   // di balik menu: resolusi rendah supaya hemat baterai/GPU; gerak dikurangi → render hanya saat perlu
   const [still] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -520,7 +543,7 @@ export function GameScene({ state, theme, selected, hovered, onTile, onHover, ro
       style={{ background: `linear-gradient(${v.sky[0]}, ${v.sky[1]})` }}
     >
       <fog attach="fog" args={[v.fog, 26, 60]} />
-      <ViewOffset bottom={bottomInset} />
+      <ViewOffset bottom={bottomInset} top={topInset} />
       <hemisphereLight args={[v.sky[0], v.table, 0.6]} />
       <directionalLight
         position={[8, 16, 6]}

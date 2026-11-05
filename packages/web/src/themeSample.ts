@@ -1,7 +1,7 @@
-// Contoh tema JSON lengkap dengan kartu kustom (teks + efek) dan efek petak — untuk tombol
-// "Unduh contoh JSON" di Studio tema dan file contoh-tema-kustom.json di folder project.
+// Isi awal editor Studio tema: kartu kustom (teks + efek) dan efek petak yang muncul saat pemain
+// menekan "Mulai Buat Kartu Kustom" / "Isi contoh rekomendasi". Bukan tema siap pakai.
 
-import { THEMES, type CustomDecks, type Theme, type TileFx } from '@monopoli/engine';
+import type { CustomDecks, TileFx } from '@monopoli/engine';
 
 export const SAMPLE_DECKS: CustomDecks = {
   chance: [
@@ -25,23 +25,8 @@ export const SAMPLE_DECKS: CustomDecks = {
 };
 
 export const SAMPLE_TILE_FX: Record<string, TileFx> = {
-  '0': { anim: 'money', emoji: '💰', caption: 'Gajian! Saatnya belanja' },
+  '0': { caption: 'Gajian! Saatnya belanja', custom: { motion: 'fountain', emojis: '💰🪙💵', count: 16, size: 1.1, speed: 1, glow: '#fbbf24', sound: 'pay' } },
   '24': { anim: 'fireworks', emoji: '🎆', caption: 'Pesta kembang api tahun baru' },
-  '39': { anim: 'fireworks', emoji: '🎉', caption: 'Malam takbiran di ibu kota' },
+  '39': { caption: 'Malam takbiran di ibu kota', custom: { motion: 'confetti', emojis: '🎉🎊✨', count: 20, size: 1, speed: 1, sound: 'win' } },
   '20': { emoji: '☕', caption: 'Ngopi santai dulu di warung' },
 };
-
-/** Tema contoh: salinan Indonesia + kartu & efek kustom. */
-export function sampleTheme(): Theme {
-  const base = structuredClone(THEMES.find((t) => t.id === 'indonesia')!);
-  return {
-    ...base,
-    id: 'contoh-kustom',
-    name: 'Indonesia Pesta',
-    flag: '⭐',
-    description: 'Contoh tema JSON: kartu Kesempatan & Dana Umum buatan sendiri, plus efek khusus di beberapa petak.',
-    deckNames: { chance: 'Kejutan', community: 'Kas Kampung' },
-    decks: SAMPLE_DECKS,
-    tileFx: SAMPLE_TILE_FX,
-  };
-}

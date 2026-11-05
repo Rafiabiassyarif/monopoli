@@ -7,6 +7,7 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { BOARD, type Theme } from '@monopoli/engine';
 import { TILE_ANIM_MS, tileAnimFor, type AnimId } from '../tileAnims';
+import { CustomFx } from '../CustomFx';
 import { TOP } from './Fx';
 import { tilePos, tileRotY } from './layout';
 import { tr } from '../i18n';
@@ -1588,9 +1589,16 @@ export function TileAnim({ tile, theme, t0, anim }: { tile: number; theme: Theme
   const color = info.color ?? (BOARD_COLOR(theme, tile) || theme.visual.accent);
   return (
     <group position={[x, TOP, z]} rotation={[0, tileRotY(tile), 0]}>
-      <group ref={g}>
-        <AnimBody id={id} t0={t0} color={color} accent={theme.visual.accent} />
-      </group>
+      {info.custom ? (
+        // animasi buatan pemain: partikel emoji (CSS) melayang di atas petak
+        <Html position={[0, 1.2, 0]} center zIndexRange={[18, 0]} pointerEvents="none">
+          <CustomFx anim={info.custom} px={150} runKey={t0} sound />
+        </Html>
+      ) : (
+        <group ref={g}>
+          <AnimBody id={id} t0={t0} color={color} accent={theme.visual.accent} />
+        </group>
+      )}
       <Html position={[0, 2.9, 0]} center zIndexRange={[19, 0]} pointerEvents="none">
         <div className="anim-cap">
           <span aria-hidden>{info.emoji}</span> {info.own ? info.caption : tr(info.caption)}

@@ -2,12 +2,14 @@
 // efek khusus saat mendarat di petak. Semua tersimpan di JSON tema (decks, tileFx), jadi ikut saat
 // tema diekspor/impor dan dipakai juga oleh pemain lain di room online milik host.
 
-import { BOARD, MAX_CUSTOM_CARDS, formatMoney, type CardEffect, type CustomCard, type Theme, type TileFx } from '@monopoli/engine';
-import { Plus, Sparkles, Trash } from 'lucide-react';
-import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
-import { getLang, t, useLang } from './i18n';
+import { BOARD, CUSTOM_MOTIONS, CUSTOM_SOUNDS, MAX_CUSTOM_CARDS, formatMoney, type CardEffect, type CustomAnim, type CustomCard, type CustomSound, type Theme, type TileFx } from '@monopoli/engine';
+import { ChevronDown, Pause, Play, Plus, RotateCcw, Sparkles, Trash } from 'lucide-react';
+import { Component, useEffect, useRef, useState, type ErrorInfo, type ReactNode } from 'react';
+import { getLang, t, tName, useLang } from './i18n';
 import { tileName } from './names';
-import { ALL_ANIMS, ANIM_LABELS } from './tileAnims';
+import { ALL_ANIMS, ANIM_LABELS, graphemes, tileAnimFor } from './tileAnims';
+import { CustomFx, MOTION_INFO } from './CustomFx';
+import { sfx } from './sfx';
 import { MoneyInput, Seg } from './ui';
 import { SAMPLE_DECKS, SAMPLE_TILE_FX } from './themeSample';
 
@@ -111,16 +113,94 @@ function autoGenerateCardText(e: CardEffect): string {
   }
 }
 
-function EffectFields({ e, theme, onChange }: { e: CardEffect; theme: Theme; onChange: (e: CardEffect) => void }) {
-  const tiles = (value: number, set: (n: number) => void) => (
-    <select className="input sm" value={value} onChange={(x) => set(+x.target.value)} aria-label={t('Petak tujuan')}>
-      {BOARD.map((_, i) => (
-        <option key={i} value={i}>
-          {i}. {tileName(theme, i)}
-        </option>
-      ))}
-    </select>
+/** Popover sederhana bergaya gelap (pengganti <select> bawaan yang sulit dibaca). */
+function Popover({ label, children, wide }: { label: ReactNode; children: (close: () => void) => ReactNode; wide?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const down = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    addEventListener('mousedown', down);
+    addEventListener('keydown', key);
+    return () => (removeEventListener('mousedown', down), removeEventListener('keydown', key));
+  }, [open]);
+  return (
+    <div className="pk" ref={ref}>
+      <button type="button" className={`pk-btn ${open ? 'open' : ''}`} onClick={() => setOpen(!open)} aria-expanded={open}>
+        {label}
+        <ChevronDown size={15} className="pk-caret" />
+      </button>
+      {open && <div className={`pk-pop ${wide ? 'wide' : ''}`}>{children(() => setOpen(false))}</div>}
+    </div>
   );
+}
+
+const KIND_ICON: Record<string, string> = { property: '', station: '🚆', utility: '💡', tax: '💰', chance: '❓', community: '🎁', go: '🏁', jail: '⛓️', parking: '☕', gotojail: '👮' };
+const tileColor = (theme: Theme, i: number) => (BOARD[i].kind === 'property' ? theme.groupColors[BOARD[i].group!] : '#64748b');
+
+/** Pilih petak: kotak pencarian + daftar 40 petak berwarna sesuai grupnya. */
+function TilePicker({ theme, value, onChange, taken }: { theme: Theme; value: number; onChange: (i: number) => void; taken?: Set<number> }) {
+  const [q, setQ] = useState('');
+  return (
+    <Popover
+      wide
+      label={
+        <span className="pk-tile">
+          <i style={{ background: tileColor(theme, value) }} />
+          <span className="pk-num">#{value}</span>
+          <span className="truncate">{tileName(theme, value)}</span>
+        </span>
+      }
+    >
+      {(close) => (
+        <>
+          <input className="input sm pk-search" autoFocus placeholder={t('Cari petak…')} value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="pk-tiles">
+            {BOARD.map((b, i) => {
+              const name = tileName(theme, i);
+              if (q && !`${i} ${name}`.toLowerCase().includes(q.toLowerCase())) return null;
+              const busy = taken?.has(i) && i !== value;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  disabled={busy}
+                  className={`pk-tile-opt ${i === value ? 'on' : ''}`}
+                  style={{ ['--c' as string]: tileColor(theme, i) }}
+                  onClick={() => (onChange(i), close())}
+                  title={busy ? t('Petak ini sudah punya efek') : undefined}
+                >
+                  <span className="pk-num">#{i}</span>
+                  <span className="truncate">{KIND_ICON[b.kind]} {name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Popover>
+  );
+}
+
+const KIND_ICONS: Record<Kind, string> = { money: '💰', eachPlayer: '👥', advance: '🏃', nearest: '🚆', back: '↩️', jail: '⛓️', jailFree: '🎫', repairs: '🛠️' };
+
+/** Pilih aksi kartu: kotak-kotak ber-ikon (bukan dropdown). */
+function KindPicker({ value, onChange }: { value: Kind; onChange: (k: Kind) => void }) {
+  return (
+    <div className="kind-grid" role="radiogroup" aria-label={t('Efek kartu')}>
+      {KINDS.map((o) => (
+        <button key={o.v} type="button" role="radio" aria-checked={o.v === value} className={`kind-opt ${o.v === value ? 'on' : ''}`} onClick={() => o.v !== value && onChange(o.v)}>
+          <span className="kind-ico">{KIND_ICONS[o.v]}</span>
+          <span>{t(o.label)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function EffectFields({ e, theme, onChange }: { e: CardEffect; theme: Theme; onChange: (e: CardEffect) => void }) {
+  const tiles = (value: number, set: (n: number) => void) => <TilePicker theme={theme} value={value} onChange={set} />;
   const signed = (amount: number, set: (n: number) => void, max: number, plus: string, minus: string) => (
     <>
       <Seg
@@ -220,19 +300,12 @@ function CardItem({
         <div className="card-item-row effect-row">
           <label className="card-field-label">{t('Aksi kartu:')}</label>
           <div className="card-controls-wrap">
-            <select
-              className="input sm effect-kind-select"
-              value={effect.kind}
-              aria-label={t('Efek kartu')}
-              onChange={(x) => onChange({ ...card, effect: defaultEffect(x.target.value as Kind) })}
-            >
-              {KINDS.map((o) => (
-                <option key={o.v} value={o.v}>
-                  {t(o.label)}
-                </option>
-              ))}
-            </select>
-            <EffectFields e={effect} theme={theme} onChange={(nextEffect) => onChange({ ...card, effect: nextEffect })} />
+            <KindPicker value={effect.kind} onChange={(k) => onChange({ ...card, effect: defaultEffect(k) })} />
+            {!['jail', 'jailFree'].includes(effect.kind) && (
+              <div className="effect-fields">
+                <EffectFields e={effect} theme={theme} onChange={(nextEffect) => onChange({ ...card, effect: nextEffect })} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -334,7 +407,7 @@ function DeckEditor({ deck, draft, up }: { deck: Deck; draft: Theme; up: (p: Par
   };
 
   const defaultDeckName = deck === 'chance' ? t('Kesempatan') : t('Dana Umum');
-  const name = (deck === 'chance' ? draft?.deckNames?.chance : draft?.deckNames?.community) || defaultDeckName;
+  const name = tName((deck === 'chance' ? draft?.deckNames?.chance : draft?.deckNames?.community) || '') || defaultDeckName;
   const isCustom = !!list;
 
   return (
@@ -405,11 +478,227 @@ function DeckEditor({ deck, draft, up }: { deck: Deck; draft: Theme; up: (p: Par
   );
 }
 
+const QUICK_EMOJI = ['🎉', '🎆', '✨', '💰', '💸', '🪙', '⭐', '❤️', '🔥', '❄️', '🌸', '🍀', '🎈', '🎊', '⚡', '🌈', '🍜', '🚀', '👑', '💎', '🐉', '🦋', '🎵', '🏆'];
+const SOUND_INFO: Record<CustomSound, [string, string]> = {
+  none: ['🔇', 'Tanpa suara'],
+  buy: ['🔔', 'Ting ceria'],
+  win: ['🎺', 'Fanfare'],
+  pay: ['🪙', 'Koin'],
+  card: ['🃏', 'Kartu'],
+  jail: ['🚨', 'Sirene'],
+};
+const defaultCustom = (emoji?: string): CustomAnim => ({ motion: 'burst', emojis: emoji || '🎉✨', count: 12, size: 1, speed: 1, sound: 'none' });
+type FxMode = 'builtin' | 'custom' | 'emoji';
+const modeOf = (f: TileFx): FxMode => (f.custom ? 'custom' : f.anim ? 'builtin' : 'emoji');
+
+function Slider({ label, value, min, max, step, fmt, onChange }: { label: string; value: number; min: number; max: number; step: number; fmt: (v: number) => string; onChange: (v: number) => void }) {
+  return (
+    <label className="fx-slider">
+      <span className="fx-slider-top">
+        <span>{label}</span>
+        <b>{fmt(value)}</b>
+      </span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value)} />
+    </label>
+  );
+}
+
+/** Pratinjau petak + animasinya (buatan sendiri: diputar langsung; bawaan: ikon + keterangan). */
+function FxPreview({ theme, tile, f }: { theme: Theme; tile: number; f: TileFx }) {
+  const [run, setRun] = useState(0);
+  const [loop, setLoop] = useState(true);
+  const info = tileAnimFor({ ...theme, tileFx: { [String(tile)]: f } }, tile);
+  return (
+    <div className="fx-preview">
+      <div className="fx-stage" style={{ ['--c' as string]: tileColor(theme, tile) }}>
+        <div className="fx-tile">
+          <span className="fx-tile-band" />
+          <span className="fx-tile-name">{tileName(theme, tile)}</span>
+        </div>
+        <div className="fx-stage-anim">
+          {f.custom ? (
+            <CustomFx anim={f.custom} px={150} loop={loop} runKey={run} sound={!loop && run > 0} />
+          ) : (
+            <span key={run} className="fx-emoji-pop">{info?.emoji ?? f.emoji ?? '✨'}</span>
+          )}
+        </div>
+        {(f.caption || info?.caption) && (
+          <div className="fx-cap" key={`c${run}`}>
+            {info?.emoji} {f.caption || info?.caption}
+          </div>
+        )}
+      </div>
+      <div className="fx-preview-actions">
+        <button type="button" className="btn sm" onClick={() => (setLoop(false), setRun((n) => n + 1))}>
+          <RotateCcw size={14} /> {t('Putar sekali')}
+        </button>
+        {f.custom && (
+          <button type="button" className="btn sm ghost" onClick={() => setLoop(!loop)}>
+            {loop ? <Pause size={14} /> : <Play size={14} />} {loop ? t('Henti ulang') : t('Ulang terus')}
+          </button>
+        )}
+      </div>
+      {!f.custom && f.anim && <p className="muted small fx-note">{t('Animasi 3D bawaan tampil lengkap saat bermain di papan 3D.')}</p>}
+    </div>
+  );
+}
+
+function TileFxRow({ k, f, draft, taken, set, remove }: { k: string; f: TileFx; draft: Theme; taken: Set<number>; set: (key: string, next: TileFx, oldKey?: string) => void; remove: () => void }) {
+  const tileIdx = +k;
+  const mode = modeOf(f);
+  const upd = (p: Partial<TileFx>) => set(k, { ...f, ...p });
+  const updC = (p: Partial<CustomAnim>) => upd({ custom: { ...(f.custom ?? defaultCustom(f.emoji)), ...p } });
+  const setMode = (m: FxMode) => {
+    if (m === 'custom') set(k, { caption: f.caption, custom: f.custom ?? defaultCustom(f.emoji) });
+    else if (m === 'builtin') set(k, { caption: f.caption, emoji: f.emoji, anim: f.anim ?? 'fireworks' });
+    else set(k, { caption: f.caption, emoji: f.emoji ?? (f.custom ? graphemes(f.custom.emojis)[0] : undefined) ?? '✨' });
+  };
+  const c = f.custom;
+  return (
+    <div className="fx-row">
+      <div className="fx-row-head">
+        <TilePicker
+          theme={draft}
+          value={tileIdx}
+          taken={taken}
+          onChange={(to) => {
+            if (to === tileIdx) return;
+            set(String(to), f, k);
+          }}
+        />
+        <button type="button" className="icon-btn delete-card-btn" title={t('Hapus efek')} aria-label={t('Hapus efek')} onClick={remove}>
+          <Trash size={15} />
+        </button>
+      </div>
+
+      <div className="fx-row-body">
+        <div className="fx-settings">
+          <Seg
+            value={mode}
+            onChange={setMode}
+            options={[
+              { v: 'custom', label: <>🎨 {t('Buat sendiri')}</> },
+              { v: 'builtin', label: <>🎬 {t('Animasi bawaan')}</> },
+              { v: 'emoji', label: <>😀 {t('Emoji saja')}</> },
+            ]}
+          />
+
+          {mode === 'custom' && c && (
+            <>
+              <div className="fx-field">
+                <span className="card-field-label">{t('Gerakan')}</span>
+                <div className="motion-grid">
+                  {CUSTOM_MOTIONS.map((m) => (
+                    <button key={m} type="button" className={`motion-opt ${c.motion === m ? 'on' : ''}`} onClick={() => updC({ motion: m })}>
+                      <span className="kind-ico">{MOTION_INFO[m][0]}</span>
+                      <span>{t(MOTION_INFO[m][1])}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="fx-field">
+                <span className="card-field-label">{t('Emoji yang beterbangan (maks 4)')}</span>
+                <div className="emoji-row">
+                  <input className="input emoji-big" value={c.emojis} maxLength={24} onChange={(e) => updC({ emojis: e.target.value })} aria-label={t('Emoji')} />
+                  <button type="button" className="btn sm ghost" onClick={() => updC({ emojis: '' })}>
+                    {t('Kosongkan')}
+                  </button>
+                </div>
+                <div className="emoji-palette">
+                  {QUICK_EMOJI.map((em) => (
+                    <button
+                      key={em}
+                      type="button"
+                      className="emoji-chip"
+                      onClick={() => {
+                        const cur = graphemes(c.emojis);
+                        updC({ emojis: (cur.length >= 4 ? [...cur.slice(1), em] : [...cur, em]).join('') });
+                      }}
+                    >
+                      {em}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="fx-sliders">
+                <Slider label={t('Jumlah')} value={c.count} min={1} max={30} step={1} fmt={(v) => String(v)} onChange={(v) => updC({ count: v })} />
+                <Slider label={t('Ukuran')} value={c.size} min={0.5} max={2.5} step={0.1} fmt={(v) => `${v.toFixed(1)}×`} onChange={(v) => updC({ size: v })} />
+                <Slider label={t('Kecepatan')} value={c.speed} min={0.5} max={2} step={0.1} fmt={(v) => `${v.toFixed(1)}×`} onChange={(v) => updC({ speed: v })} />
+              </div>
+              <div className="fx-field fx-inline">
+                <label className="fx-glow-toggle">
+                  <input type="checkbox" checked={!!c.glow} onChange={(e) => updC({ glow: e.target.checked ? '#fbbf24' : undefined })} />
+                  <span>{t('Cahaya di belakang')}</span>
+                </label>
+                {c.glow && <input type="color" className="color-input" value={c.glow} onChange={(e) => updC({ glow: e.target.value })} aria-label={t('Warna cahaya')} />}
+              </div>
+              <div className="fx-field">
+                <span className="card-field-label">{t('Suara')}</span>
+                <div className="sound-row">
+                  {CUSTOM_SOUNDS.map((snd) => (
+                    <button key={snd} type="button" className={`sound-opt ${(c.sound ?? 'none') === snd ? 'on' : ''}`} onClick={() => (updC({ sound: snd }), snd !== 'none' && sfx(snd))}>
+                      {SOUND_INFO[snd][0]} {t(SOUND_INFO[snd][1])}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {mode === 'builtin' && (
+            <div className="fx-field">
+              <span className="card-field-label">{t('Pilih animasi 3D')}</span>
+              <div className="anim-grid">
+                {ALL_ANIMS.map((a) => (
+                  <button key={a} type="button" className={`anim-opt ${f.anim === a ? 'on' : ''}`} onClick={() => upd({ anim: a })} title={t(ANIM_LABELS[a]?.[1] ?? a)}>
+                    <span className="kind-ico">{ANIM_LABELS[a]?.[0] ?? '✨'}</span>
+                    <span className="truncate">{t(ANIM_LABELS[a]?.[1] ?? a)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {mode === 'emoji' && (
+            <div className="fx-field">
+              <span className="card-field-label">{t('Emoji')}</span>
+              <div className="emoji-row">
+                <input className="input emoji-big" value={f.emoji ?? ''} maxLength={16} onChange={(e) => upd({ emoji: e.target.value || undefined })} aria-label="Emoji" />
+              </div>
+              <div className="emoji-palette">
+                {QUICK_EMOJI.map((em) => (
+                  <button key={em} type="button" className="emoji-chip" onClick={() => upd({ emoji: em })}>
+                    {em}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="fx-field">
+            <span className="card-field-label">{t('Pesan ucapan:')}</span>
+            <input className="input" value={f.caption ?? ''} maxLength={80} placeholder={t('Contoh: Pesta kembang api meriah!')} aria-label={t('Keterangan')} onChange={(x) => upd({ caption: x.target.value || undefined })} />
+          </div>
+        </div>
+
+        <FxPreview theme={draft} tile={tileIdx} f={f} />
+      </div>
+    </div>
+  );
+}
+
 function TileFxEditor({ draft, up }: { draft: Theme; up: (p: Partial<Theme>) => void }) {
   const fx = draft?.tileFx ?? {};
   const rows = Object.entries(fx).sort((a, b) => +a[0] - +b[0]);
-  const set = (next: Record<string, TileFx>) => up({ tileFx: Object.keys(next).length ? next : undefined });
-  const free = BOARD.map((_, i) => i).find((i) => !(String(i) in fx));
+  const save = (next: Record<string, TileFx>) => up({ tileFx: Object.keys(next).length ? next : undefined });
+  const taken = new Set(Object.keys(fx).map(Number));
+  const free = BOARD.map((_, i) => i).find((i) => !taken.has(i));
+  const set = (key: string, next: TileFx, oldKey?: string) => {
+    const copy = { ...fx };
+    if (oldKey !== undefined) delete copy[oldKey];
+    copy[key] = next;
+    save(copy);
+  };
 
   return (
     <section className="card-deck-panel">
@@ -420,16 +709,14 @@ function TileFxEditor({ draft, up }: { draft: Theme; up: (p: Partial<Theme>) => 
             {rows.length} {t('petak aktif')}
           </span>
         </div>
-        {!rows.length && (
-          <button type="button" className="btn sm primary" onClick={() => set(structuredClone(SAMPLE_TILE_FX))}>
-            <Sparkles size={14} /> {t('Isi contoh rekomendasi')}
+        {free !== undefined && rows.length > 0 && (
+          <button type="button" className="btn sm primary" onClick={() => set(String(free), { custom: defaultCustom(), caption: '' })}>
+            <Plus size={14} /> {t('Tambah efek petak')}
           </button>
         )}
       </div>
 
-      <p className="card-panel-desc">
-        {t('Tampilkan animasi 3D, emoji, dan pesan ucapan seru saat bidak pemain singgah di petak tertentu.')}
-      </p>
+      <p className="card-panel-desc">{t('Buat animasimu sendiri: pilih gerakan, emoji, jumlah, ukuran, kecepatan, cahaya, dan suara — lihat hasilnya langsung di pratinjau. Atau pakai animasi 3D bawaan.')}</p>
 
       {!rows.length ? (
         <div className="card-default-state-box">
@@ -437,120 +724,33 @@ function TileFxEditor({ draft, up }: { draft: Theme; up: (p: Partial<Theme>) => 
           <div className="card-default-state-content">
             <h4>{t('Belum Ada Efek Khusus')}</h4>
             <p>{t('Semua petak berjalan dengan animasi standar. Kamu bisa mengisi contoh rekomendasi atau menambahkan efek sendiri.')}</p>
-            <button type="button" className="btn sm primary" onClick={() => set(structuredClone(SAMPLE_TILE_FX))}>
-              <Sparkles size={14} /> {t('Isi contoh rekomendasi')}
-            </button>
+            <div className="row">
+              <button type="button" className="btn sm primary" onClick={() => set('0', { custom: defaultCustom('💰🪙'), caption: t('Gajian!') })}>
+                <Plus size={14} /> {t('Buat efek pertama')}
+              </button>
+              <button type="button" className="btn sm" onClick={() => save(structuredClone(SAMPLE_TILE_FX))}>
+                <Sparkles size={14} /> {t('Isi contoh rekomendasi')}
+              </button>
+            </div>
           </div>
         </div>
       ) : (
         <div className="tile-fx-stack">
-          {rows.map(([k, f]) => {
-            const tileIdx = +k;
-            const name = tileName(draft, tileIdx);
-            return (
-              <div key={k} className="tile-fx-item-box">
-                <div className="tile-fx-item-header">
-                  <div className="tile-fx-title-pill">
-                    <span className="tile-fx-idx">#{tileIdx}</span>
-                    <span className="tile-fx-name">{name}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="icon-btn delete-card-btn"
-                    title={t('Hapus efek')}
-                    aria-label={t('Hapus efek')}
-                    onClick={() => {
-                      const next = { ...fx };
-                      delete next[k];
-                      set(next);
-                    }}
-                  >
-                    <Trash size={15} />
-                  </button>
-                </div>
-
-                <div className="tile-fx-form-grid">
-                  <div className="tile-fx-field">
-                    <label className="card-field-label">{t('Petak tujuan:')}</label>
-                    <select
-                      className="input sm"
-                      value={k}
-                      aria-label={t('Petak')}
-                      onChange={(x) => {
-                        const next = { ...fx };
-                        delete next[k];
-                        next[x.target.value] = f;
-                        set(next);
-                      }}
-                    >
-                      {BOARD.map((_, i) => (
-                        <option key={i} value={i} disabled={String(i) !== k && String(i) in fx}>
-                          {i}. {tileName(draft, i)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="tile-fx-field">
-                    <label className="card-field-label">{t('Animasi 3D:')}</label>
-                    <select
-                      className="input sm"
-                      value={f?.anim ?? ''}
-                      aria-label={t('Animasi')}
-                      onChange={(x) => set({ ...fx, [k]: { ...f, anim: x.target.value || undefined } })}
-                    >
-                      <option value="">{t('— emoji saja —')}</option>
-                      {ALL_ANIMS.map((a) => {
-                        const info = ANIM_LABELS[a];
-                        const label = info ? `${info[0]} ${info[1]}` : a;
-                        return (
-                          <option key={a} value={a}>
-                            {label}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div className="tile-fx-field tile-fx-field-emoji">
-                    <label className="card-field-label">Emoji:</label>
-                    <input
-                      className="input sm emoji-in"
-                      value={f?.emoji ?? ''}
-                      maxLength={16}
-                      placeholder="🎉"
-                      aria-label="Emoji"
-                      onChange={(x) => set({ ...fx, [k]: { ...f, emoji: x.target.value || undefined } })}
-                    />
-                  </div>
-                </div>
-
-                <div className="tile-fx-caption-row">
-                  <label className="card-field-label">{t('Pesan ucapan:')}</label>
-                  <input
-                    className="input"
-                    value={f?.caption ?? ''}
-                    maxLength={80}
-                    placeholder={t('Contoh: Pesta kembang api meriah!')}
-                    aria-label={t('Keterangan')}
-                    onChange={(x) => set({ ...fx, [k]: { ...f, caption: x.target.value || undefined } })}
-                  />
-                </div>
-              </div>
-            );
-          })}
-
-          {free !== undefined && (
-            <div className="tile-fx-bottom-actions">
-              <button
-                type="button"
-                className="btn sm"
-                onClick={() => set({ ...fx, [String(free)]: { emoji: '✨', caption: '' } })}
-              >
-                <Plus size={14} /> {t('Tambah efek petak')}
-              </button>
-            </div>
-          )}
+          {rows.map(([k, f]) => (
+            <TileFxRow
+              key={k}
+              k={k}
+              f={f ?? {}}
+              draft={draft}
+              taken={taken}
+              set={set}
+              remove={() => {
+                const next = { ...fx };
+                delete next[k];
+                save(next);
+              }}
+            />
+          ))}
         </div>
       )}
     </section>
@@ -565,8 +765,8 @@ function ThemeCardsInner({ draft, up }: { draft: Theme; up: (p: Partial<Theme>) 
   const communityDeck = draft?.decks?.community;
   const tileFxCount = draft?.tileFx ? Object.keys(draft.tileFx).length : 0;
 
-  const chanceName = draft?.deckNames?.chance || t('Kesempatan');
-  const communityName = draft?.deckNames?.community || t('Dana Umum');
+  const chanceName = tName(draft?.deckNames?.chance || '') || t('Kesempatan');
+  const communityName = tName(draft?.deckNames?.community || '') || t('Dana Umum');
 
   return (
     <div className="theme-cards-wrapper">

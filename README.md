@@ -87,13 +87,14 @@ Tema anime/kartun: pakai nama parodi/fan-made, tanpa logo/gambar resmi bila dipu
 
 ### Tema JSON dengan kartu & efek sendiri
 
-Contoh lengkap: [`contoh-tema-kustom.json`](contoh-tema-kustom.json) (juga tombol **Unduh contoh JSON** di Studio tema). Impor lewat **Studio tema → Impor file tema (.json)**, atau edit di tab **Kartu & efek** / **JSON**. Batas file 100 KB; semua isi divalidasi di browser dan di server.
+Spesifikasi lengkap ada di **Studio tema → Spesifikasi tema JSON**. Impor lewat **Studio tema → Impor file tema (.json)**, atau edit di tab **Kartu & efek** / **JSON**. Batas file 100 KB; semua isi divalidasi di browser dan di server.
 
 Field tambahan (semua opsional):
 
 - `decks.chance` / `decks.community` — 1–30 kartu `{ "text": "...", "effect": {...} }`, mengganti kartu bawaan tumpukan itu. Di teks: `{m:100}` = uang (satuan engine, 1 = Rp1 jt), `{m:go}` = gaji START, `{t:39}` = nama petak.
 - `cards` — ganti teks kartu bawaan saja (kunci `c1`..`c16`, `d1`..`d16`), efek tetap.
 - `tileFx` — efek saat mendarat di petak, kunci nomor petak `"0"`..`"39"`: `{ "anim": "fireworks", "emoji": "🎆", "caption": "Pesta!" }`. `anim` opsional (tanpa `anim` = emoji saja).
+  Animasi buatan sendiri: `"custom": { "motion": "confetti", "emojis": "🎉🎊", "count": 20, "size": 1, "speed": 1, "glow": "#fbbf24", "sound": "win" }` — `motion`: burst, rain, float, fountain, confetti, spin, orbit, bounce, zoom, wave · `count` 1–30 · `size` 0.5–2.5 · `speed` 0.5–2 · `sound`: none, buy, pay, win, jail, card.
 
 | `effect.kind` | Isian | Arti |
 |---|---|---|

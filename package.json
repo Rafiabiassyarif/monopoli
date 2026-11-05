@@ -2,7 +2,7 @@
   "name": "monopoli-3d",
   "version": "0.1.0",
   "private": true,
-  "description": "Monopoli 3D \u2014 lokal (bot/teman) & online, tema bisa dikustom.",
+  "description": "Monopoli 3D — lokal (bot/teman) & online, tema bisa dikustom.",
   "workspaces": [
     "packages/engine",
     "packages/server",
@@ -14,7 +14,9 @@
     "typecheck": "tsc -p packages/engine --noEmit && tsc -p packages/server --noEmit && tsc -p packages/web --noEmit",
     "build": "npm run build -w @monopoli/web",
     "start": "npm run start -w @monopoli/server",
-    "e2e": "node e2e/smoke.mjs"
+    "e2e": "node e2e/smoke.mjs",
+    "responsive": "node e2e/responsive.mjs",
+    "studio-mobile": "node e2e/studio-mobile.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
